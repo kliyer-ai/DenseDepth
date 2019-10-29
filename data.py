@@ -30,8 +30,8 @@ def get_nyu_data(batch_size, nyu_data_zipfile='nyu_data.zip'):
 
     return data, nyu2_train, nyu2_test, shape_rgb, shape_depth
 
-def get_nyu_train_test_data(batch_size):
-    data, nyu2_train, nyu2_test, shape_rgb, shape_depth = get_nyu_data(batch_size)
+def get_nyu_train_test_data(batch_size, nyu_data_zipfile='nyu_data.zip'):
+    data, nyu2_train, nyu2_test, shape_rgb, shape_depth = get_nyu_data(batch_size, nyu_data_zipfile)
 
     train_generator = NYU_BasicAugmentRGBSequence(data, nyu2_train, batch_size=batch_size, shape_rgb=shape_rgb, shape_depth=shape_depth)
     test_generator = NYU_BasicRGBSequence(data, nyu2_test, batch_size=batch_size, shape_rgb=shape_rgb, shape_depth=shape_depth)
