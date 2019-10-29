@@ -14,7 +14,7 @@ from keras.utils.vis_utils import plot_model
 
 # Argument Parser
 parser = argparse.ArgumentParser(description='High Quality Monocular Depth Estimation via Transfer Learning')
-parser.add_argument('--data', default='nyu', type=str, help='Training dataset.')
+parser.add_argument('--data', default='custom', type=str, help='Training dataset.')
 parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate')
 parser.add_argument('--bs', type=int, default=4, help='Batch size')
 parser.add_argument('--epochs', type=int, default=20, help='Number of epochs')
@@ -38,8 +38,9 @@ else:
 # Create the model
 model = create_model( existing=args.checkpoint )
 
-# Data loaders
+# Data loaders 
 if args.data == 'nyu': train_generator, test_generator = get_nyu_train_test_data( args.bs )
+if args.data == 'custom': train_generator, test_generator = get_nyu_train_test_data( args.bs, nyu_data_zipfile='custom.zip' )
 if args.data == 'unreal': train_generator, test_generator = get_unreal_train_test_data( args.bs )
 
 # Training session details
