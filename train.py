@@ -14,7 +14,7 @@ from keras.utils.vis_utils import plot_model
 
 # Argument Parser
 parser = argparse.ArgumentParser(description='High Quality Monocular Depth Estimation via Transfer Learning')
-parser.add_argument('--data', default='custom', type=str, help='Training dataset.')
+parser.add_argument('--data', default='wire', type=str, help='Training dataset.')
 parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate')
 parser.add_argument('--bs', type=int, default=4, help='Batch size')
 parser.add_argument('--epochs', type=int, default=20, help='Number of epochs')
@@ -40,7 +40,7 @@ model = create_model( existing=args.checkpoint )
 
 # Data loaders 
 if args.data == 'nyu': train_generator, test_generator = get_train_test_data( args.bs, data_zipfile='nyu_data.zip', max_depth=1000.0 )
-if args.data == 'custom': train_generator, test_generator = get_train_test_data( args.bs, data_zipfile='wire_data.zip', max_depth=1.0 )
+if args.data == 'wire': train_generator, test_generator = get_train_test_data( args.bs, data_zipfile='wire_data.zip', max_depth=1.0 )
 
 # Training session details
 runID = str(int(time.time())) + '-n' + str(len(train_generator)) + '-e' + str(args.epochs) + '-bs' + str(args.bs) + '-lr' + str(args.lr) + '-' + args.name
