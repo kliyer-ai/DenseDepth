@@ -40,7 +40,7 @@ model = create_model( existing=args.checkpoint )
 
 # Data loaders 
 if args.data == 'nyu': train_generator, test_generator = get_train_test_data( args.bs, data_zipfile='nyu_data.zip', max_depth=1000.0 )
-if args.data == 'wire': train_generator, test_generator = get_train_test_data( args.bs, data_zipfile='wire_data.zip', max_depth=1.0 )
+if args.data == 'wire': train_generator, test_generator = get_train_test_data( args.bs, data_zipfile='wire_data.zip', max_depth=1000.0 )
 
 # Training session details
 runID = str(int(time.time())) + '-n' + str(len(train_generator)) + '-e' + str(args.epochs) + '-bs' + str(args.bs) + '-lr' + str(args.lr) + '-' + args.name
