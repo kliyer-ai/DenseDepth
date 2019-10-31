@@ -44,7 +44,7 @@ model = create_model( existing=args.checkpoint )
 train_generator, test_generator = get_train_test_data( args.bs, data_zipfile=args.data)
 
 # Training session details
-runID = str(int(time.time())) + '-n' + str(len(train_generator)) + '-e' + str(args.epochs) + '-bs' + str(args.bs) + '-lr' + str(args.lr) + '-' + args.name
+runID = 'hello_world' #str(int(time.time())) + '-n' + str(len(train_generator)) + '-e' + str(args.epochs) + '-bs' + str(args.bs) + '-lr' + str(args.lr) + '-' + args.name
 outputPath = './models/'
 runPath = outputPath + runID
 pathlib.Path(runPath).mkdir(parents=True, exist_ok=True)
@@ -93,5 +93,5 @@ if args.collabtb:
 model.fit_generator(train_generator, callbacks=callbacks, validation_data=test_generator, epochs=args.epochs, shuffle=True)
 
 # Save the final trained model:
-# basemodel.save(runPath + '/model.h5')
-tf.saved_model.save(basemodel, './test')
+basemodel.save(runPath + '/model.h5')
+# tf.saved_model.save(basemodel, './test')
