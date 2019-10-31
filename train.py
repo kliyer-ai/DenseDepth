@@ -56,13 +56,13 @@ if True:
     training_script_content = '#' + str(sys.argv) + '\n' + training_script_content
     with open(runPath+'/'+__file__, 'w') as training_script: training_script.write(training_script_content)
 
-    # Generate model plot
-    plot_model(model, to_file=runPath+'/model_plot.svg', show_shapes=True, show_layer_names=True)
+    # # Generate model plot
+    # plot_model(model, to_file=runPath+'/model_plot.svg', show_shapes=True, show_layer_names=True)
 
-    # Save model summary to file
-    from contextlib import redirect_stdout
-    with open(runPath+'/model_summary.txt', 'w') as f:
-        with redirect_stdout(f): model.summary()
+    # # Save model summary to file
+    # from contextlib import redirect_stdout
+    # with open(runPath+'/model_summary.txt', 'w') as f:
+    #     with redirect_stdout(f): model.summary()
 
 # Multi-gpu setup:
 basemodel = model
