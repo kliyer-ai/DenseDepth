@@ -12,6 +12,9 @@ from keras.optimizers import Adam
 from keras.utils import multi_gpu_model
 from keras.utils.vis_utils import plot_model
 
+# mine
+import tensorflow as tf
+
 # Argument Parser
 parser = argparse.ArgumentParser(description='High Quality Monocular Depth Estimation via Transfer Learning')
 parser.add_argument('--data', default='disparity_data.zip', type=str, help='Training dataset.')
@@ -77,7 +80,7 @@ model.compile(loss=depth_loss_function, optimizer=optimizer)
 print('Ready for training!\n') 
 
 # Callbacks
-callbacks = get_callbacks(model, basemodel, train_generator, test_generator, runPath)
+# callbacks = get_callbacks(model, basemodel, train_generator, test_generator, runPath)
 
 if args.collabtb:
     print('adding collab tb callback')
@@ -89,4 +92,5 @@ if args.collabtb:
 model.fit_generator(train_generator, callbacks=callbacks, validation_data=test_generator, epochs=args.epochs, shuffle=True)
 
 # Save the final trained model:
-basemodel.save(runPath + '/model.h5')
+# basemodel.save(runPath + '/model.h5')
+tf.saved_model.save(basemodel, './test')
