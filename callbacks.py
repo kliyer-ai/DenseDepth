@@ -18,7 +18,7 @@ def make_image(tensor):
     output.close()
     return tf.Summary.Image(height=height, width=width, colorspace=channel, encoded_image_string=image_string)
 
-def get_nyu_callbacks(model, basemodel, train_generator, test_generator, test_set, runPath):
+def get_callbacks(model, basemodel, train_generator, test_generator, test_set, runPath):
     callbacks = []
 
     # Callback: Tensorboard
