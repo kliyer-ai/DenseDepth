@@ -5,6 +5,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '5'
 from loss import depth_loss_function
 from utils import predict, save_images, load_test_data
 from model import create_model
+from data import get_train_test_data
 from callbacks import get_callbacks
 
 from keras.optimizers import Adam
