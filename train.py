@@ -5,7 +5,6 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '5'
 from loss import depth_loss_function
 from utils import predict, save_images, load_test_data
 from model import create_model
-from data import get_train_test_data, get_unreal_train_test_data
 from callbacks import get_callbacks
 
 from keras.optimizers import Adam
@@ -81,7 +80,6 @@ print('Ready for training!\n')
 # Callbacks
 callbacks = []
 if args.data == 'nyu': callbacks = get_callbacks(model, basemodel, train_generator, test_generator, load_test_data() if args.full else None , runPath)
-if args.data == 'unreal': callbacks = get_callbacks(model, basemodel, train_generator, test_generator, load_test_data() if args.full else None , runPath)
 
 # Start training
 model.fit_generator(train_generator, callbacks=callbacks, validation_data=test_generator, epochs=args.epochs, shuffle=True)
