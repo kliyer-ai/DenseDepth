@@ -80,6 +80,7 @@ model.compile(loss=depth_loss_function, optimizer=optimizer)
 print('Ready for training!\n') 
 
 # Callbacks
+callbacks = []
 # callbacks = get_callbacks(model, basemodel, train_generator, test_generator, runPath)
 
 if args.collabtb:
