@@ -5,7 +5,7 @@ from PIL import Image
 
 import keras
 from keras import backend as K
-from utils import DepthNorm, predict, evaluate
+from utils import predict, evaluate
 
 import tensorflow as tf
 
@@ -37,7 +37,7 @@ def get_callbacks(model, basemodel, train_generator, test_generator, test_set, r
                 from skimage.transform import resize
                 plasma = plt.get_cmap('plasma')
 
-                minDepth, maxDepth = 10, 1000
+                minDepth, maxDepth = 0, 1
 
                 train_samples = []
                 test_samples = []
@@ -46,8 +46,8 @@ def get_callbacks(model, basemodel, train_generator, test_generator, test_set, r
                     x_train, y_train = train_generator.__getitem__(self.train_idx[i], False)
                     x_test, y_test = test_generator[self.test_idx[i]]
 
-                    x_train, y_train = x_train[0], np.clip(DepthNorm(y_train[0], maxDepth=maxDepth), minDepth, maxDepth) / maxDepth 
-                    x_test, y_test = x_test[0], np.clip(DepthNorm(y_test[0], maxDepth=maxDepth), minDepth, maxDepth) / maxDepth
+                    x_train, y_train = x_train[0], np.clip(y_train[0], minDepth, maxDepth) / maxDepth 
+                    x_test, y_test = x_test[0], np.clip(y_test[0], minDepth, maxDepth) / maxDepth
 
                     h, w = y_train.shape[0], y_train.shape[1]
 
@@ -57,8 +57,8 @@ def get_callbacks(model, basemodel, train_generator, test_generator, test_set, r
                     gt_train = plasma(y_train[:,:,0])[:,:,:3]
                     gt_test = plasma(y_test[:,:,0])[:,:,:3]
 
-                    predict_train = plasma(predict(model, x_train, minDepth=minDepth, maxDepth=maxDepth)[0,:,:,0])[:,:,:3]
-                    predict_test = plasma(predict(model, x_test, minDepth=minDepth, maxDepth=maxDepth)[0,:,:,0])[:,:,:3]
+                    predict_train = plasma(predict(model, x_train)[0,:,:,0])[:,:,:3]
+                    predict_test = plasma(predict(model, x_test)[0,:,:,0])[:,:,:3]
 
                     train_samples.append(np.vstack([rgb_train, gt_train, predict_train]))
                     test_samples.append(np.vstack([rgb_test, gt_test, predict_test]))

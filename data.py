@@ -30,16 +30,16 @@ def get_data(batch_size, data_zipfile):
 
     return data, train, test, shape_rgb, shape_depth
 
-def get_train_test_data(batch_size, data_zipfile, max_depth):
+def get_train_test_data(batch_size, data_zipfile):
     data, train, test, shape_rgb, shape_depth = get_data(batch_size, data_zipfile)
 
-    train_generator = BasicAugmentRGBSequence(data, train, batch_size=batch_size, shape_rgb=shape_rgb, shape_depth=shape_depth, max_depth=max_depth)
-    test_generator = BasicRGBSequence(data, test, batch_size=batch_size, shape_rgb=shape_rgb, shape_depth=shape_depth, max_depth=max_depth)
+    train_generator = BasicAugmentRGBSequence(data, train, batch_size=batch_size, shape_rgb=shape_rgb, shape_depth=shape_depth,)
+    test_generator = BasicRGBSequence(data, test, batch_size=batch_size, shape_rgb=shape_rgb, shape_depth=shape_depth,)
 
     return train_generator, test_generator
 
 class BasicAugmentRGBSequence(Sequence):
-    def __init__(self, data, dataset, batch_size, shape_rgb, shape_depth, is_flip=False, is_addnoise=False, is_erase=False, max_depth=1000.0):
+    def __init__(self, data, dataset, batch_size, shape_rgb, shape_depth, is_flip=False, is_addnoise=False, is_erase=False):
         self.data = data
         self.dataset = dataset
         self.policy = BasicPolicy( color_change_ratio=0.50, mirror_ratio=0.50, flip_ratio=0.0 if not is_flip else 0.2, 
@@ -47,7 +47,6 @@ class BasicAugmentRGBSequence(Sequence):
         self.batch_size = batch_size
         self.shape_rgb = shape_rgb
         self.shape_depth = shape_depth
-        self.maxDepth = max_depth
 
         from sklearn.utils import shuffle
         self.dataset = shuffle(self.dataset, random_state=0)
@@ -59,7 +58,6 @@ class BasicAugmentRGBSequence(Sequence):
 
     def __getitem__(self, idx, is_apply_policy=True):
         batch_x, batch_y = np.zeros( self.shape_rgb ), np.zeros( self.shape_depth )
-
         # Augmentation of RGB images
         for i in range(batch_x.shape[0]):
             index = min((idx * self.batch_size) + i, self.N-1)
@@ -67,8 +65,7 @@ class BasicAugmentRGBSequence(Sequence):
             sample = self.dataset[index]
 
             x = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[0]]) )).reshape(480,640,3)/255,0,1)
-            y = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[1]]) )).reshape(480,640,1)/255*self.maxDepth,0,self.maxDepth)
-            y = DepthNorm(y, maxDepth=self.maxDepth)
+            y = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[1]]) )).reshape(480,640,1)/255,0,1)
 
             batch_x[i] = resize(x, 480)
             batch_y[i] = resize(y, 240)
@@ -82,14 +79,13 @@ class BasicAugmentRGBSequence(Sequence):
         return batch_x, batch_y
 
 class BasicRGBSequence(Sequence):
-    def __init__(self, data, dataset, batch_size,shape_rgb, shape_depth, max_depth=1000.0):
+    def __init__(self, data, dataset, batch_size,shape_rgb, shape_depth):
         self.data = data
         self.dataset = dataset
         self.batch_size = batch_size
         self.N = len(self.dataset)
         self.shape_rgb = shape_rgb
         self.shape_depth = shape_depth
-        self.maxDepth = max_depth
 
     def __len__(self):
         return int(np.ceil(self.N / float(self.batch_size)))
@@ -102,8 +98,7 @@ class BasicRGBSequence(Sequence):
             sample = self.dataset[index]
 
             x = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[0]]))).reshape(480,640,3)/255,0,1)
-            y = np.asarray(Image.open(BytesIO(self.data[sample[1]])), dtype=np.float32).reshape(480,640,1).copy().astype(float) / 10.0
-            y = DepthNorm(y, maxDepth=self.maxDepth)
+            y = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[1]]) )).reshape(480,640,1)/255,0,1).copy().astype(float)
 
             batch_x[i] = resize(x, 480)
             batch_y[i] = resize(y, 240)

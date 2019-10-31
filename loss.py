@@ -1,7 +1,7 @@
 import keras.backend as K
 import tensorflow as tf
 
-def depth_loss_function(y_true, y_pred, theta=0.1, maxDepthVal=1000.0/10.0):
+def depth_loss_function(y_true, y_pred, theta=0.1):
     
     # Point-wise depth
     l_depth = K.mean(K.abs(y_pred - y_true), axis=-1)
@@ -12,7 +12,7 @@ def depth_loss_function(y_true, y_pred, theta=0.1, maxDepthVal=1000.0/10.0):
     l_edges = K.mean(K.abs(dy_pred - dy_true) + K.abs(dx_pred - dx_true), axis=-1)
 
     # Structural similarity (SSIM) index
-    l_ssim = K.clip((1 - tf.image.ssim(y_true, y_pred, maxDepthVal)) * 0.5, 0, 1)
+    l_ssim = K.clip((1 - tf.image.ssim(y_true, y_pred, 1.0)) * 0.5, 0, 1)
 
     # Weights
     w1 = 1.0

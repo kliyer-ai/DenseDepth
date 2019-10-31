@@ -1,17 +1,12 @@
 import numpy as np
 from PIL import Image
 
-def DepthNorm(x, maxDepth):
-    return maxDepth / x
-
-def predict(model, images, minDepth=10, maxDepth=1000, batch_size=2):
+def predict(model, images, batch_size=2):
     # Support multiple RGBs, one RGB image, even grayscale 
     if len(images.shape) < 3: images = np.stack((images,images,images), axis=2)
     if len(images.shape) < 4: images = images.reshape((1, images.shape[0], images.shape[1], images.shape[2]))
     # Compute predictions
-    predictions = model.predict(images, batch_size=batch_size)
-    # Put in expected range
-    return np.clip(DepthNorm(predictions, maxDepth=maxDepth), minDepth, maxDepth) / maxDepth
+    return model.predict(images, batch_size=batch_size)
 
 def scale_up(scale, images):
     from skimage.transform import resize
@@ -117,10 +112,10 @@ def evaluate(model, rgb, depth, crop, batch_size=6, verbose=False):
         
         # Compute results
         true_y = depth[(i)*bs:(i+1)*bs,:,:]
-        pred_y = scale_up(2, predict(model, x/255, minDepth=10, maxDepth=1000, batch_size=bs)[:,:,:,0]) * 10.0
+        pred_y = scale_up(2, predict(model, x/255, batch_size=bs)[:,:,:,0]) * 10.0
         
         # Test time augmentation: mirror image estimate
-        pred_y_flip = scale_up(2, predict(model, x[...,::-1,:]/255, minDepth=10, maxDepth=1000, batch_size=bs)[:,:,:,0]) * 10.0
+        pred_y_flip = scale_up(2, predict(model, x[...,::-1,:]/255, batch_size=bs)[:,:,:,0]) * 10.0
 
         # Crop based on Eigen et al. crop
         true_y = true_y[:,crop[0]:crop[1]+1, crop[2]:crop[3]+1]
