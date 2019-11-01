@@ -5,7 +5,7 @@ import matplotlib
 
 # Keras / TensorFlow
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '5'
-from keras.models import load_model
+from keras.models import model_from_yaml
 from layers import BilinearUpSampling2D
 from utils import predict, load_images, display_images
 from matplotlib import pyplot as plt
@@ -22,7 +22,11 @@ custom_objects = {'BilinearUpSampling2D': BilinearUpSampling2D, 'depth_loss_func
 print('Loading model...')
 
 # Load model into GPU / CPU
-model = load_model(args.model, custom_objects=custom_objects, compile=False)
+# model = load_model(args.model, custom_objects=custom_objects, compile=False)
+with open(args.model+'.yaml', 'r') as f:
+    yaml_string = f.read()
+    model = model_from_yaml(yaml_string, custom_objects=custom_objects)
+    model.load_weights(args.model+'_weights.h5')
 
 print('\nModel loaded ({0}).'.format(args.model))
 

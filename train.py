@@ -44,7 +44,7 @@ model = create_model( existing=args.checkpoint )
 train_generator, test_generator = get_train_test_data( args.bs, data_zipfile=args.data)
 
 # Training session details
-runID = 'hello_world' #str(int(time.time())) + '-n' + str(len(train_generator)) + '-e' + str(args.epochs) + '-bs' + str(args.bs) + '-lr' + str(args.lr) + '-' + args.name
+runID = str(int(time.time())) + '-n' + str(len(train_generator)) + '-e' + str(args.epochs) + '-bs' + str(args.bs) + '-lr' + str(args.lr) + '-' + args.name
 outputPath = './models/'
 runPath = outputPath + runID
 pathlib.Path(runPath).mkdir(parents=True, exist_ok=True)
@@ -57,13 +57,14 @@ if True:
     training_script_content = '#' + str(sys.argv) + '\n' + training_script_content
     with open(runPath+'/'+__file__, 'w') as training_script: training_script.write(training_script_content)
 
-    # Generate model plot
-    # plot_model(model, to_file=runPath+'/model_plot.svg', show_shapes=True, show_layer_names=True)
+    if False:
+        # Generate model plot
+        plot_model(model, to_file=runPath+'/model_plot.svg', show_shapes=True, show_layer_names=True)
 
-    # Save model summary to file
-    # from contextlib import redirect_stdout
-    # with open(runPath+'/model_summary.txt', 'w') as f:
-    #     with redirect_stdout(f): model.summary()
+        # Save model summary to file
+        from contextlib import redirect_stdout
+        with open(runPath+'/model_summary.txt', 'w') as f:
+            with redirect_stdout(f): model.summary()
 
 # Multi-gpu setup:
 basemodel = model
@@ -90,8 +91,10 @@ if args.collabtb:
     callbacks.append(TensorBoardColabCallback(tbc))
 
 # Start training
-model.fit_generator(train_generator, callbacks=callbacks, validation_data=test_generator, epochs=args.epochs, shuffle=True)
+model.fit_generator(train_generator, callbacks=[], validation_data=test_generator, epochs=args.epochs, shuffle=True)
 
 # Save the final trained model:
-basemodel.save(runPath + '/model.h5')
+with open(runPath+'/model.yaml', 'w') as f:
+        f.write(basemodel.to_yaml())
+basemodel.save_weights(runPath + '/model_weights.h5', )
 # tf.saved_model.save(basemodel, './test')
