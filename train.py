@@ -82,7 +82,7 @@ print('Ready for training!\n')
 
 # Callbacks
 callbacks = []
-# callbacks = get_callbacks(model, basemodel, train_generator, test_generator, runPath)
+callbacks = get_callbacks(model, basemodel, train_generator, test_generator, runPath)
 
 if args.collabtb:
     print('adding collab tb callback')
@@ -91,7 +91,7 @@ if args.collabtb:
     callbacks.append(TensorBoardColabCallback(tbc))
 
 # Start training
-model.fit_generator(train_generator, callbacks=[], validation_data=test_generator, epochs=args.epochs, shuffle=True)
+model.fit_generator(train_generator, callbacks=callbacks, validation_data=test_generator, epochs=args.epochs, shuffle=True)
 
 # Save the final trained model:
 with open(runPath+'/model.yaml', 'w') as f:
