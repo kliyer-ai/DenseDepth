@@ -29,7 +29,6 @@ parser.add_argument('--gpuids', type=str, default='0', help='IDs of GPUs to use'
 parser.add_argument('--name', type=str, default='wires', help='A name to attach to the training session')
 parser.add_argument('--checkpoint', type=str, default='', help='Start training from an existing model.')
 parser.add_argument('--full', dest='full', action='store_true', help='Full training with metrics, checkpoints, and image samples.')
-parser.add_argument('--collabtb', dest='collabtb', action='store_true', help='Full training with metrics, checkpoints, and image samples.')
 
 args = parser.parse_args()
 
@@ -86,12 +85,6 @@ print('Ready for training!\n')
 # Callbacks
 callbacks = []
 callbacks = get_callbacks(model, basemodel, train_generator, test_generator, runPath)
-
-if args.collabtb:
-    print('adding collab tb callback')
-    from tensorboardcolab import TensorBoardColab, TensorBoardColabCallback
-    tbc=TensorBoardColab()
-    callbacks.append(TensorBoardColabCallback(tbc))
 
 # Start training
 model.fit_generator(train_generator, callbacks=callbacks, validation_data=test_generator, epochs=args.epochs, shuffle=True)
