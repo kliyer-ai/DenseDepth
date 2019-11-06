@@ -6,16 +6,18 @@ from keras.layers import Input, InputLayer, Conv2D, Activation, LeakyReLU, Conca
 from layers import BilinearUpSampling2D
 from loss import depth_loss_function
 
-def create_model(existing='', is_twohundred=False, is_halffeatures=True):
+def create_model(existing='', encoder='dense169', is_halffeatures=True):
         
     if len(existing) == 0:
         print('Loading base model (DenseNet)..')
 
         # Encoder Layers
-        if is_twohundred:
+        if encoder=='dense201':
             base_model = applications.DenseNet201(input_shape=(None, None, 3), include_top=False)
-        else:
+        elif encoder=='dense169':
             base_model = applications.DenseNet169(input_shape=(None, None, 3), include_top=False)
+        elif encoder=='dense121':
+            base_model = applications.DenseNet121(input_shape=(None, None, 3), include_top=False)
 
 
         print('Base model loaded.')

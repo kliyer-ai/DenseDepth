@@ -21,6 +21,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 # Argument Parser
 parser = argparse.ArgumentParser(description='High Quality Monocular Depth Estimation via Transfer Learning')
 parser.add_argument('--data', default='disparity_data.zip', type=str, help='Training dataset.')
+parser.add_argument('--encoder', default='dense169', type=str, help='Encoder model architecture.')
 parser.add_argument('--lr', type=float, default=0.0001, help='Learning rate')
 parser.add_argument('--bs', type=int, default=4, help='Batch size')
 parser.add_argument('--epochs', type=int, default=20, help='Number of epochs')
@@ -40,13 +41,13 @@ else:
     print('Will use ' + str(args.gpus) + ' GPUs.')
 
 # Create the model
-model = create_model( existing=args.checkpoint )
+model = create_model( existing=args.checkpoint, encoder=args.encoder )
 
 # Data loaders 
 train_generator, test_generator = get_train_test_data( args.bs, data_zipfile=args.data)
 
 # Training session details
-runID = str(int(time.time())) + '-n' + str(len(train_generator)) + '-e' + str(args.epochs) + '-bs' + str(args.bs) + '-lr' + str(args.lr) + '-' + args.name
+runID = str(int(time.time())) + '-m' + args.encoder + '-n' + str(len(train_generator)) + '-e' + str(args.epochs) + '-bs' + str(args.bs) + '-lr' + str(args.lr) + '-' + args.name
 outputPath = './models/'
 runPath = outputPath + runID
 pathlib.Path(runPath).mkdir(parents=True, exist_ok=True)
