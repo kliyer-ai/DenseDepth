@@ -12,8 +12,6 @@ from keras.optimizers import Adam
 from keras.utils import multi_gpu_model
 from keras.utils.vis_utils import plot_model
 
-# mine
-import tensorflow as tf
 
 # Argument Parser
 parser = argparse.ArgumentParser(description='High Quality Monocular Depth Estimation via Transfer Learning')
@@ -97,4 +95,3 @@ model.fit_generator(train_generator, callbacks=callbacks, validation_data=test_g
 with open(runPath+'/model.yaml', 'w') as f:
         f.write(basemodel.to_yaml())
 basemodel.save_weights(runPath + '/model_weights.h5', )
-# tf.saved_model.save(basemodel, './test')
