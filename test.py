@@ -25,6 +25,7 @@ print('Loading model...')
 # model = load_model(args.model, custom_objects=custom_objects, compile=False)
 with open(args.model+'.yaml', 'r') as f:
     yaml_string = f.read()
+    print(yaml_string)
     model = model_from_yaml(yaml_string, custom_objects=custom_objects)
     model.load_weights(args.model+'_weights.h5')
 
