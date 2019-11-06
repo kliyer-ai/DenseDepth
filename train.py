@@ -13,6 +13,11 @@ from keras.utils import multi_gpu_model
 from keras.utils.vis_utils import plot_model
 
 
+# check with nvidia-smi
+os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
+
 # Argument Parser
 parser = argparse.ArgumentParser(description='High Quality Monocular Depth Estimation via Transfer Learning')
 parser.add_argument('--data', default='disparity_data.zip', type=str, help='Training dataset.')
