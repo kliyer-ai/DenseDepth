@@ -36,7 +36,7 @@ def display_images(outputs, inputs=None, gt=None, is_colormap=True, is_rescale=T
     import skimage
     from skimage.transform import resize
 
-    plasma = plt.get_cmap('plasma')
+    plasma = plt.get_cmap('Greys_r')
 
     shape = (outputs[0].shape[0], outputs[0].shape[1], 3)
     
