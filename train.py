@@ -67,7 +67,9 @@ if True:
 
 # Multi-gpu setup:
 basemodel = model
-if args.gpus > 1: model = multi_gpu_model(model, gpus=args.gpus)
+if args.gpus > 1: 
+    model = multi_gpu_model(model, gpus=args.gpus)
+    print('using multiple gpus')
 
 # Optimizer
 optimizer = Adam(lr=args.lr, amsgrad=True)
