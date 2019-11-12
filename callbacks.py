@@ -18,7 +18,7 @@ def make_image(tensor):
     output.close()
     return tf.Summary.Image(height=height, width=width, colorspace=channel, encoded_image_string=image_string)
 
-def get_callbacks(model, basemodel, train_generator, test_generator, runPath, test_set=None):
+def get_callbacks(model, basemodel, train_generator, test_generator, runPath, test_set):
     callbacks = []
 
     # Callback: Tensorboard
@@ -65,7 +65,7 @@ def get_callbacks(model, basemodel, train_generator, test_generator, runPath, te
 
                 self.writer.add_summary(tf.Summary(value=[tf.Summary.Value(tag='Train', image=make_image(255 * np.hstack(train_samples)))]), epoch)
                 self.writer.add_summary(tf.Summary(value=[tf.Summary.Value(tag='Test', image=make_image(255 * np.hstack(test_samples)))]), epoch)
-                
+
                 # Metrics
                 # e = evaluate(model, test_set['rgb'], test_set['depth'], test_set['crop'], batch_size=6, verbose=True)
                 # logs.update({'rel': e[3]})

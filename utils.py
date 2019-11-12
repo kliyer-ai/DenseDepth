@@ -76,17 +76,34 @@ def save_images(filename, outputs, inputs=None, gt=None, is_colormap=True, is_re
     im = Image.fromarray(np.uint8(montage*255))
     im.save(filename)
 
-def load_test_data(test_data_zip_file='nyu_test.zip'):
+def resize(img, resolution=480, padding=6):
+    from skimage.transform import resize
+    return resize(img, (resolution, int(resolution*4/3)), preserve_range=True, mode='reflect', anti_aliasing=True )
+
+def load_test_data(test_data_zip_file='color_disparity_data.zip'):
     print('Loading test data...', end='')
-    import numpy as np
     from data import extract_zip
     data = extract_zip(test_data_zip_file)
+    dataset = list((row.split(',') for row in (data['data/test.csv']).decode("utf-8").split('\n') if len(row) > 0))
+    n = len(dataset)
+
+    shape_rgb = (n, 480, 640, 3)
+    shape_depth = (n, 240, 320, 1)
+
+    rgb, depth = np.zeros( shape_rgb ), np.zeros( shape_depth )
+
     from io import BytesIO
-    rgb = np.load(BytesIO(data['eigen_test_rgb.npy']))
-    depth = np.load(BytesIO(data['eigen_test_depth.npy']))
-    crop = np.load(BytesIO(data['eigen_test_crop.npy']))
+    for i in range(n):
+        sample = dataset[i]
+
+        x = np.clip(np.asarray(Image.open( BytesIO(data[sample[0]]) )).reshape(480,640,3)/255,0,1)
+        y = np.clip(np.asarray(Image.open( BytesIO(data[sample[1]]) )).reshape(480,640,1)/255,0,1)
+
+        rgb[i] = resize(x, 480)
+        depth[i] = resize(y, 240)
+
     print('Test data loaded.\n')
-    return {'rgb':rgb, 'depth':depth, 'crop':crop}
+    return {'rgb':rgb, 'depth':depth, 'crop':None}
 
 def compute_errors(gt, pred):
     thresh = np.maximum((gt / pred), (pred / gt))

@@ -5,13 +5,13 @@ from zipfile import ZipFile
 from keras.utils import Sequence
 from augment import BasicPolicy
 
+from utils import resize
+
 def extract_zip(input_zip):
     input_zip=ZipFile(input_zip)
     return {name: input_zip.read(name) for name in input_zip.namelist()}
 
-def resize(img, resolution=480, padding=6):
-    from skimage.transform import resize
-    return resize(img, (resolution, int(resolution*4/3)), preserve_range=True, mode='reflect', anti_aliasing=True )
+
 
 def get_data(batch_size, data_zipfile):
     data = extract_zip(data_zipfile)
