@@ -1,4 +1,6 @@
 import os, sys, glob, time, pathlib, argparse
+from datetime import datetime
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '5'
 
 # Kerasa / TensorFlow
@@ -43,7 +45,7 @@ model = create_model( existing=args.checkpoint, encoder=args.encoder )
 train_generator, test_generator = get_train_test_data( args.bs, data_zipfile=args.data)
 
 # Training session details
-runID = str(int(time.time())) + '-m' + args.encoder + '-n' + str(len(train_generator)) + '-e' + str(args.epochs) + '-bs' + str(args.bs) + '-lr' + str(args.lr) + '-' + args.name
+runID = datetime.now().strftime('%d-%b-%H:%M') + '-m' + args.encoder + '-e' + str(args.epochs) + '-bs' + str(args.bs) + '-lr' + str(args.lr) + '-' + args.name
 outputPath = './models/'
 runPath = outputPath + runID
 pathlib.Path(runPath).mkdir(parents=True, exist_ok=True)
@@ -56,20 +58,19 @@ if True:
     training_script_content = '#' + str(sys.argv) + '\n' + training_script_content
     with open(runPath+'/'+__file__, 'w') as training_script: training_script.write(training_script_content)
 
-    if False:
-        # Generate model plot
-        plot_model(model, to_file=runPath+'/model_plot.svg', show_shapes=True, show_layer_names=True)
+    # Generate model plot
+    plot_model(model, to_file=runPath+'/model_plot.svg', show_shapes=True, show_layer_names=True)
 
-        # Save model summary to file
-        from contextlib import redirect_stdout
-        with open(runPath+'/model_summary.txt', 'w') as f:
-            with redirect_stdout(f): model.summary()
+    # Save model summary to file
+    from contextlib import redirect_stdout
+    with open(runPath+'/model_summary.txt', 'w') as f:
+        with redirect_stdout(f): model.summary()
 
 # Multi-gpu setup:
 basemodel = model
 if args.gpus > 1: 
     model = multi_gpu_model(model, gpus=args.gpus)
-    print('using multiple gpus')
+    print('multi GPU ready!')
 
 # Optimizer
 optimizer = Adam(lr=args.lr, amsgrad=True)
@@ -82,8 +83,7 @@ model.compile(loss=depth_loss_function, optimizer=optimizer)
 print('Ready for training!\n') 
 
 # Callbacks
-callbacks = []
-callbacks = get_callbacks(model, basemodel, train_generator, test_generator, runPath)
+callbacks = get_callbacks(model, basemodel, train_generator, test_generator, load_test_data() if args.full else None, runPath)
 
 # Start training
 model.fit_generator(train_generator, callbacks=callbacks, validation_data=test_generator, epochs=args.epochs, shuffle=True)

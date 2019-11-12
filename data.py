@@ -38,11 +38,11 @@ def get_train_test_data(batch_size, data_zipfile):
     return train_generator, test_generator
 
 class BasicAugmentRGBSequence(Sequence):
-    def __init__(self, data, dataset, batch_size, shape_rgb, shape_depth, is_flip=False, is_addnoise=False, is_erase=False):
+    def __init__(self, data, dataset, batch_size, shape_rgb, shape_depth, is_flip=True, is_addnoise=False, is_erase=False):
         self.data = data
         self.dataset = dataset
-        self.policy = BasicPolicy( color_change_ratio=0.50, mirror_ratio=0.50, flip_ratio=0.0 if not is_flip else 0.2, 
-                                    add_noise_peak=0 if not is_addnoise else 20, erase_ratio=-1.0 if not is_erase else 0.5)
+        self.policy = BasicPolicy( color_change_ratio=0.50, mirror_ratio=0.50, flip_ratio=0.0 if not is_flip else 0.50, 
+                                    add_noise_peak=0 if not is_addnoise else 20, erase_ratio=0.0 if not is_erase else 0.5)
         self.batch_size = batch_size
         self.shape_rgb = shape_rgb
         self.shape_depth = shape_depth

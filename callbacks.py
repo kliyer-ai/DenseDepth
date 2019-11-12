@@ -23,8 +23,8 @@ def get_callbacks(model, basemodel, train_generator, test_generator, runPath, te
 
     # Callback: Tensorboard
     class LRTensorBoard(keras.callbacks.TensorBoard):
-        def __init__(self, log_dir):
-            super().__init__(log_dir=log_dir)
+        def __init__(self, log_dir, **kwargs):
+            super().__init__(log_dir=log_dir, **kwargs)
 
             self.num_samples = 6
             self.train_idx = np.random.randint(low=0, high=len(train_generator), size=10)
@@ -35,7 +35,7 @@ def get_callbacks(model, basemodel, train_generator, test_generator, runPath, te
                 # Samples using current model
                 import matplotlib.pyplot as plt
                 from skimage.transform import resize
-                plasma = plt.get_cmap('plasma')
+                plasma = plt.get_cmap('Greys_r')
 
                 minDepth, maxDepth = 0, 1
 
@@ -67,16 +67,16 @@ def get_callbacks(model, basemodel, train_generator, test_generator, runPath, te
                 self.writer.add_summary(tf.Summary(value=[tf.Summary.Value(tag='Test', image=make_image(255 * np.hstack(test_samples)))]), epoch)
                 
                 # Metrics
-                e = evaluate(model, test_set['rgb'], test_set['depth'], test_set['crop'], batch_size=6, verbose=True)
-                logs.update({'rel': e[3]})
-                logs.update({'rms': e[4]})
-                logs.update({'log10': e[5]})
+                # e = evaluate(model, test_set['rgb'], test_set['depth'], test_set['crop'], batch_size=6, verbose=True)
+                # logs.update({'rel': e[3]})
+                # logs.update({'rms': e[4]})
+                # logs.update({'log10': e[5]})
 
             super().on_epoch_end(epoch, logs)
-    callbacks.append( LRTensorBoard(log_dir=runPath) )
+    callbacks.append( LRTensorBoard(log_dir=runPath, histogram_freq=0, write_graph=False, write_grads=False) )
 
     # Callback: Learning Rate Scheduler
-    lr_schedule = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.7, patience=5, min_lr=0.00009, min_delta=1e-2)
+    lr_schedule = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.7, patience=5, min_lr=0.00009, min_delta=1e-2, verbose=1)
     callbacks.append( lr_schedule ) # reduce learning rate when stuck
 
     # Callback: save checkpoints
