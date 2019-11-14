@@ -9,6 +9,8 @@ from keras.models import model_from_yaml
 from layers import BilinearUpSampling2D
 from utils import predict, load_images, display_images
 from matplotlib import pyplot as plt
+import cv2 as cv
+import numpy as np
 
 # Argument Parser
 parser = argparse.ArgumentParser(description='High Quality Monocular Depth Estimation via Transfer Learning')
@@ -41,8 +43,14 @@ outputs = predict(model, inputs)
 #matplotlib.use('TkAgg')   
 
 # Display results
-viz = display_images(outputs.copy(), inputs.copy())
+viz = display_images(outputs.copy(), inputs.copy(), is_colormap=False)
+split_path = os.path.split(os.path.normpath(args.input))
+print(split_path)
+path = split_path[-2] + split_path[-1]
+
+# cv.imwrite(path, np.uint8(viz*255))
+
 plt.figure(figsize=(10,5))
 plt.imshow(viz)
-plt.savefig('test.png')
+plt.savefig(path)
 plt.show()
