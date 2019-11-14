@@ -14,7 +14,7 @@ from keras.optimizers import Adam
 from keras.utils import multi_gpu_model
 from keras.utils.vis_utils import plot_model
 
-from metrics import point_wise_depth, edges, ssim
+from loss import point_wise_depth, edges, ssim
 
 # Argument Parser
 parser = argparse.ArgumentParser(description='High Quality Monocular Depth Estimation via Transfer Learning')
