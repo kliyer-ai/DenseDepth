@@ -1,5 +1,6 @@
 import numpy as np
 from PIL import Image
+from shape import get_shape_rgb, get_shape_depth
 
 def predict(model, images, batch_size=2):
     # Support multiple RGBs, one RGB image, even grayscale 
@@ -36,7 +37,7 @@ def display_images(outputs, inputs=None, gt=None, is_colormap=True, is_rescale=T
     import skimage
     from skimage.transform import resize
 
-    plasma = plt.get_cmap('Greys_r')
+    plasma = plt.get_cmap('plasma')
 
     shape = (outputs[0].shape[0], outputs[0].shape[1], 3)
     
@@ -76,9 +77,9 @@ def save_images(filename, outputs, inputs=None, gt=None, is_colormap=True, is_re
     im = Image.fromarray(np.uint8(montage*255))
     im.save(filename)
 
-def resize(img, resolution=480, padding=6):
+def resize(img, resolution, padding=6):
     from skimage.transform import resize
-    return resize(img, (resolution, int(resolution*4/3)), preserve_range=True, mode='reflect', anti_aliasing=True )
+    return resize(img, (resolution, resolution), preserve_range=True, mode='reflect', anti_aliasing=True )
 
 def load_test_data(test_data_zip_file='color_disparity_data.zip'):
     print('Loading test data...', end='')
@@ -87,8 +88,8 @@ def load_test_data(test_data_zip_file='color_disparity_data.zip'):
     dataset = list((row.split(',') for row in (data['data/test.csv']).decode("utf-8").split('\n') if len(row) > 0))
     n = len(dataset)
 
-    shape_rgb = (n, 480, 640, 3)
-    shape_depth = (n, 240, 320, 1)
+    shape_rgb = get_shape_rgb(batch_size=n)
+    shape_depth = get_shape_depth(batch_size=n, halved=True)
 
     rgb, depth = np.zeros( shape_rgb ), np.zeros( shape_depth )
 
@@ -96,11 +97,11 @@ def load_test_data(test_data_zip_file='color_disparity_data.zip'):
     for i in range(n):
         sample = dataset[i]
 
-        x = np.clip(np.asarray(Image.open( BytesIO(data[sample[0]]) )).reshape(480,640,3)/255,0,1)
-        y = np.clip(np.asarray(Image.open( BytesIO(data[sample[1]]) )).reshape(480,640,1)/255,0,1)
+        x = np.clip(np.asarray(Image.open( BytesIO(data[sample[0]]) )).reshape(get_shape_rgb())/255,0,1)
+        y = np.clip(np.asarray(Image.open( BytesIO(data[sample[1]]) )).reshape(get_shape_depth())/255,0,1)
 
-        rgb[i] = resize(x, 480)
-        depth[i] = resize(y, 240)
+        rgb[i] = resize(x, get_shape_rgb()[1])
+        depth[i] = resize(y, get_shape_depth(halved=True)[0])
 
     print('Test data loaded.\n')
     return {'rgb':rgb, 'depth':depth, 'crop':None}
