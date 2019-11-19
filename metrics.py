@@ -3,7 +3,6 @@ import tensorflow as tf
 
 def rmse(y_true, y_pred):
     rmse = K.square(y_true - y_pred) 
-    rmse = K.mean(rmse, axis=-1)  
     return K.sqrt(K.mean(rmse))
 
 def log_10(y_true, y_pred):
@@ -25,6 +24,3 @@ def delta_3(y_true, y_pred):
 def abs_rel(y_true, y_pred):
     return K.mean(K.abs((y_true - y_pred) / y_true))
 
-def test(y_true, y_pred):
-    # Point-wise depth
-    return 0.1 * K.mean(K.abs(y_pred - y_true))
