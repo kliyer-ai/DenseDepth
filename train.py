@@ -15,6 +15,7 @@ from keras.utils import multi_gpu_model
 from keras.utils.vis_utils import plot_model
 
 from loss import point_wise_depth, edges, ssim
+from metrics import *
 
 # Argument Parser
 parser = argparse.ArgumentParser(description='High Quality Monocular Depth Estimation via Transfer Learning')
@@ -80,7 +81,8 @@ optimizer = Adam(lr=args.lr, amsgrad=True)
 # Compile the model
 print('\n\n\n', 'Compiling model..', runID, '\n\n\tGPU ' + (str(args.gpus)+' gpus' if args.gpus > 1 else args.gpuids)
         + '\t\tBatch size [ ' + str(args.bs) + ' ] ' + ' \n\n')
-model.compile(loss=depth_loss_function, optimizer=optimizer, metrics=[point_wise_depth, edges, ssim])
+metrics = [abs_rel, rmse, point_wise_depth, test, edges, ssim]
+model.compile(loss=depth_loss_function, optimizer=optimizer, metrics=metrics)
 
 print('Ready for training!\n') 
 
