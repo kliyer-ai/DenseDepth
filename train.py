@@ -29,6 +29,7 @@ parser.add_argument('--gpuids', type=str, default='0', help='IDs of GPUs to use'
 parser.add_argument('--name', type=str, default='wires', help='A name to attach to the training session')
 parser.add_argument('--checkpoint', type=str, default='', help='Start training from an existing model.')
 parser.add_argument('--full', dest='full', action='store_true', help='Full training with metrics, checkpoints, and image samples.')
+parser.add_argument('--nr_inputs', type=int, default=1, help='Number of images to use.')
 
 args = parser.parse_args()
 
@@ -42,10 +43,10 @@ else:
     print('Will use ' + str(args.gpus) + ' GPUs.')
 
 # Create the model
-model = create_model( existing=args.checkpoint, encoder=args.encoder )
+model = create_model( existing=args.checkpoint, encoder=args.encoder,  nr_inputs=args.nr_inputs)
 
 # Data loaders 
-train_generator, test_generator = get_train_test_data( args.bs, data_zipfile=args.data)
+train_generator, test_generator = get_train_test_data( args.bs, data_zipfile=args.data, nr_inputs=args.nr_inputs)
 
 # Training session details
 runID = datetime.now().strftime('%d-%b-%H:%M') + '-m' + args.encoder + '-e' + str(args.epochs) + '-bs' + str(args.bs) + '-lr' + str(args.lr) + '-' + args.name
@@ -87,7 +88,7 @@ model.compile(loss=depth_loss_function, optimizer=optimizer, metrics=metrics)
 print('Ready for training!\n') 
 
 # Callbacks
-callbacks = get_callbacks(model, basemodel, train_generator, test_generator, runPath, load_test_data(args.data) if args.full else None)
+callbacks = get_callbacks(model, basemodel, train_generator, test_generator, runPath, load_test_data(args.data, nr_inputs=args.nr_inputs) if args.full else None)
 
 # Start training
 model.fit_generator(train_generator, callbacks=callbacks, validation_data=test_generator, epochs=args.epochs, shuffle=True)

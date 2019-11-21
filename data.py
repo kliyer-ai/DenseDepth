@@ -26,22 +26,23 @@ def get_data(batch_size, data_zipfile):
 
     return data, train, test
 
-def get_train_test_data(batch_size, data_zipfile):
+def get_train_test_data(batch_size, data_zipfile, nr_inputs=1):
     data, train, test = get_data(batch_size, data_zipfile)
 
-    train_generator = BasicRGBSequence(data, train, batch_size, train=True)
-    test_generator = BasicRGBSequence(data, test, batch_size)
+    train_generator = BasicRGBSequence(data, train, batch_size, nr_inputs=nr_inputs, train=True)
+    test_generator = BasicRGBSequence(data, test, batch_size, nr_inputs=nr_inputs)
 
     return train_generator, test_generator
 
 class BasicRGBSequence(Sequence):
-    def __init__(self, data, dataset, batch_size, train=False ,is_flip=True, is_addnoise=False, is_erase=False):
+    def __init__(self, data, dataset, batch_size, nr_inputs=1, train=False ,is_flip=True, is_addnoise=False, is_erase=False):
         self.data = data
         self.dataset = dataset
         self.policy = BasicPolicy( color_change_ratio=0.50, mirror_ratio=0.50, flip_ratio=0.0 if not is_flip else 0.50, 
                                     add_noise_peak=0 if not is_addnoise else 20, erase_ratio=0.0 if not is_erase else 0.50)
         self.batch_size = batch_size
         self.train = train
+        self.nr_inputs = nr_inputs
 
         from sklearn.utils import shuffle
         if self.train:
@@ -55,11 +56,10 @@ class BasicRGBSequence(Sequence):
     def __getitem__(self, idx, is_apply_policy=True):
         shape_rgb = get_shape_rgb(batch_size=self.batch_size)
         shape_depth = get_shape_depth(batch_size=self.batch_size, halved=True)
-        nr_inputs = len(self.dataset[0]) - 2
 
         batch_y = np.zeros(shape_depth)
         batches_x = []
-        for _ in range(nr_inputs):
+        for _ in range(self.nr_inputs):
             batches_x.append(np.zeros(shape_rgb))
 
 
@@ -69,7 +69,7 @@ class BasicRGBSequence(Sequence):
             sample = self.dataset[index]
 
             xs = []
-            for input_nr in range(nr_inputs):
+            for input_nr in range(self.nr_inputs):
                 x = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[input_nr]]) )).reshape(get_shape_rgb())/255,0,1)
                 x = resize(x, get_shape_rgb()[1])
                 xs.append(x)

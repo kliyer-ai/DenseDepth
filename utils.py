@@ -97,7 +97,7 @@ def resize(img, resolution, padding=6):
     from skimage.transform import resize
     return resize(img, (resolution, resolution), preserve_range=True, mode='reflect', anti_aliasing=True )
 
-def load_test_data(test_data_zip_file):
+def load_test_data(test_data_zip_file, nr_inputs=1):
     print('Loading test data...', end='')
     from data import extract_zip
     data = extract_zip(test_data_zip_file)
@@ -106,7 +106,6 @@ def load_test_data(test_data_zip_file):
 
     shape_rgb = get_shape_rgb(batch_size=n)
     shape_depth = get_shape_depth(batch_size=n, halved=True)
-    nr_inputs = len(dataset[0]) - 2
 
     batch_y = np.zeros(shape_depth)
     batches_x = []

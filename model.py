@@ -6,7 +6,7 @@ from keras.layers import Input, InputLayer, Conv2D, Activation, LeakyReLU, Conca
 from layers import BilinearUpSampling2D
 from loss import depth_loss_function
 
-def create_model(existing='', encoder='dense169', is_halffeatures=True, nr_inputs=2):
+def create_model(existing='', encoder='dense169', is_halffeatures=True, nr_inputs=1):
         
     if len(existing) == 0:
         print('Loading base model (DenseNet)..')
@@ -57,11 +57,11 @@ def create_model(existing='', encoder='dense169', is_halffeatures=True, nr_input
         # Decoder Layers
         
         # reduce filters
-        decoder = Concatenate(name='outputs_concat')(list(map(lambda model: model.output, encoders))) if len(encoders) > 1 else base_model.output
+        decoder = Concatenate(name='outputs_concat')(list(map(lambda model: model.output, encoders))) if nr_inputs > 1 else base_model.output
         decoder = Conv2D(filters=decode_filters, kernel_size=1, padding='same', input_shape=multi_model_output_shape, name='conv2')(decoder)
         
         # spatially integrate
-        if len(encoders) > 1:
+        if nr_inputs > 1:
             decoder = Conv2D(filters=decode_filters, kernel_size=3, padding='same', name='conv_integrate1')(decoder)
             decoder = Conv2D(filters=int(decode_filters/2), kernel_size=3, padding='same', name='conv_integrate2')(decoder)
             decode_filters = decode_filters // 2
