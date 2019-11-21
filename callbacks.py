@@ -5,7 +5,7 @@ from PIL import Image
 
 import keras
 from keras import backend as K
-from utils import predict, evaluate
+from utils import predict, evaluate, compute_errors
 
 import tensorflow as tf
 
@@ -60,8 +60,10 @@ def get_callbacks(model, basemodel, train_generator, test_generator, runPath, te
                     gt_train = plasma(y_train[:,:,0])[:,:,:3]
                     gt_test = plasma(y_test[:,:,0])[:,:,:3]
 
-                    predict_train = plasma(predict(model, xs_train)[0,:,:,0])[:,:,:3]
-                    predict_test = plasma(predict(model, xs_test)[0,:,:,0])[:,:,:3]
+                    y_hat_train = predict(model, xs_train)
+                    predict_train = plasma(y_hat_train[0,:,:,0])[:,:,:3]
+                    y_hat_test = predict(model, xs_test)
+                    predict_test = plasma(y_hat_test[0,:,:,0])[:,:,:3]
 
                     train_samples.append(np.vstack(rgb_train + [gt_train, predict_train]))
                     test_samples.append(np.vstack(rgb_test + [gt_test, predict_test]))
@@ -71,9 +73,10 @@ def get_callbacks(model, basemodel, train_generator, test_generator, runPath, te
 
                 # Metrics
                 # e = evaluate(model, test_set['rgb'], test_set['depth'], test_set['crop'], batch_size=6, verbose=True)
-                # logs.update({'rel': e[3]})
-                # logs.update({'rms': e[4]})
-                # logs.update({'log10': e[5]})
+                e = compute_errors(y_test, y_hat_test)
+                logs.update({'rel': e[3]})
+                logs.update({'rms': e[4]})
+                logs.update({'log10': e[5]})
 
             super().on_epoch_end(epoch, logs)
     callbacks.append( LRTensorBoard(log_dir=runPath, histogram_freq=0, write_graph=False, write_grads=False) )
