@@ -97,7 +97,7 @@ def resize(img, resolution, padding=6):
     from skimage.transform import resize
     return resize(img, (resolution, resolution), preserve_range=True, mode='reflect', anti_aliasing=True )
 
-def load_test_data(test_data_zip_file='color_disparity_data.zip'):
+def load_test_data(test_data_zip_file):
     print('Loading test data...', end='')
     from data import extract_zip
     data = extract_zip(test_data_zip_file)
