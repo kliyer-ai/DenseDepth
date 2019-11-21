@@ -1,43 +1,53 @@
 import sys
 
 from keras import applications
-from keras.models import Model, load_model
+from keras.models import Model, load_model, Sequential
 from keras.layers import Input, InputLayer, Conv2D, Activation, LeakyReLU, Concatenate
 from layers import BilinearUpSampling2D
 from loss import depth_loss_function
 
-def create_model(existing='', encoder='dense169', is_halffeatures=True):
+def create_model(existing='', encoder='dense169', is_halffeatures=True, nr_inputs=1):
         
     if len(existing) == 0:
         print('Loading base model (DenseNet)..')
 
+        encoders = []
+
         # Encoder Layers
         if encoder=='dense201':
-            base_model = applications.DenseNet201(input_shape=(None, None, 3), include_top=False)
+            encoders.append(applications.DenseNet201(input_shape=(None, None, 3), include_top=False)) 
         elif encoder=='dense169':
-            base_model = applications.DenseNet169(input_shape=(None, None, 3), include_top=False)
+            encoders.append(applications.DenseNet169(input_shape=(None, None, 3), include_top=False)) 
         elif encoder=='dense121':
-            base_model = applications.DenseNet121(input_shape=(None, None, 3), include_top=False)
+            encoders.append(applications.DenseNet121(input_shape=(None, None, 3), include_top=False)) 
 
-
-        print('Base model loaded.')
-
-        # Starting point for decoder
-        base_model_output_shape = base_model.layers[-1].output.shape
+        base_model = encoders[0]
 
         # Layer freezing?
         for layer in base_model.layers: layer.trainable = True
 
+        for _ in range(nr_inputs-1):
+            encoders.append(add_input(base_model))
+
+        print('Base model loaded.')
+
+        # Starting point for decoder
+        base_model_output_shape = base_model.layers[-1].get_output_at(0).shape
+        multi_model_output_shape = list(base_model_output_shape)
+        multi_model_output_shape[-1] = multi_model_output_shape[-1] * len(encoders)
+
+        
+
         # Starting number of decoder filters
         if is_halffeatures:
-            decode_filters = int(int(base_model_output_shape[-1])/2)
+            decode_filters = int(base_model_output_shape[-1]) // 2
         else:
-            decode_filters = int(base_model_output_shape[-1])
+            decode_filters = int(base_model_output_shape[-1]) 
 
         # Define upsampling layer
         def upproject(tensor, filters, name, concat_with):
             up_i = BilinearUpSampling2D((2, 2), name=name+'_upsampling2d')(tensor)
-            up_i = Concatenate(name=name+'_concat')([up_i, base_model.get_layer(concat_with).output]) # Skip connection
+            up_i = Concatenate(name=name+'_concat')([up_i, base_model.get_layer(concat_with).get_output_at(0)]) # Skip connection
             up_i = Conv2D(filters=filters, kernel_size=3, strides=1, padding='same', name=name+'_convA')(up_i)
             up_i = LeakyReLU(alpha=0.2)(up_i)
             up_i = Conv2D(filters=filters, kernel_size=3, strides=1, padding='same', name=name+'_convB')(up_i)
@@ -45,7 +55,9 @@ def create_model(existing='', encoder='dense169', is_halffeatures=True):
             return up_i
 
         # Decoder Layers
-        decoder = Conv2D(filters=decode_filters, kernel_size=1, padding='same', input_shape=base_model_output_shape, name='conv2')(base_model.output)
+        
+        decoder = Concatenate(name='test')(list(map(lambda model: model.output, encoders)))
+        decoder = Conv2D(filters=decode_filters, kernel_size=1, padding='same', input_shape=multi_model_output_shape, name='conv2')(decoder)
 
         decoder = upproject(decoder, int(decode_filters/2), 'up1', concat_with='pool3_pool')
         decoder = upproject(decoder, int(decode_filters/4), 'up2', concat_with='pool2_pool')
@@ -57,7 +69,7 @@ def create_model(existing='', encoder='dense169', is_halffeatures=True):
         conv3 = Conv2D(filters=1, kernel_size=3, strides=1, padding='same', name='conv3')(decoder)
 
         # Create the model
-        model = Model(inputs=base_model.input, outputs=conv3)
+        model = Model(inputs=list(map(lambda model: model.input, encoders)), outputs=conv3)
     else:
         # Load model from file
         if not existing.endswith('.h5'):
@@ -69,3 +81,46 @@ def create_model(existing='', encoder='dense169', is_halffeatures=True):
     print('Model created.')
     
     return model
+
+
+import re
+
+def add_input(model):
+
+    _input = Input(shape=(None,None,3))
+
+    # Auxiliary dictionary to describe the network graph
+    network_dict = {'input_layers_of': {}, 'new_output_tensor_of': {}}
+
+    # Set the input layers of each layer
+    for layer in model.layers:
+        for node in layer._outbound_nodes:
+            layer_name = node.outbound_layer.name
+            if layer_name not in network_dict['input_layers_of']:
+                network_dict['input_layers_of'].update(
+                        {layer_name: [layer.name]})
+            else:
+                if (layer.name not in network_dict['input_layers_of'][layer_name]):
+                    network_dict['input_layers_of'][layer_name].append(layer.name)
+
+    # Set the output tensor of the input layer
+    network_dict['new_output_tensor_of'].update(
+            {model.layers[0].name: _input})
+
+    # Iterate over all layers after the input
+    for layer in model.layers[1:]:
+
+        # Determine input tensors
+        layer_input = [network_dict['new_output_tensor_of'][layer_aux] 
+                for layer_aux in network_dict['input_layers_of'][layer.name]]
+        if len(layer_input) == 1:
+            layer_input = layer_input[0]
+
+        # Insert layer if name matches the regular expression
+        x = layer(layer_input)
+
+        # Set new output tensor (the original one, or the one of the inserted
+        # layer)
+        network_dict['new_output_tensor_of'].update({layer.name: x})
+
+    return Model(inputs=_input, outputs=x)

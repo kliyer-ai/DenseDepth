@@ -43,25 +43,28 @@ def get_callbacks(model, basemodel, train_generator, test_generator, runPath, te
                 test_samples = []
 
                 for i in range(self.num_samples):
-                    x_train, y_train = train_generator.__getitem__(self.train_idx[i], False)
-                    x_test, y_test = test_generator[self.test_idx[i]]
+                    xs_train, y_train = train_generator.__getitem__(self.train_idx[i], False)
+                    xs_test, y_test = test_generator[self.test_idx[i]]
 
-                    x_train, y_train = x_train[0], np.clip(y_train[0], minDepth, maxDepth) / maxDepth 
-                    x_test, y_test = x_test[0], np.clip(y_test[0], minDepth, maxDepth) / maxDepth
+                    xs_train = list(map(lambda x: x[0], xs_train))
+                    xs_test = list(map(lambda x: x[0], xs_test))
+
+                    y_train = np.clip(y_train[0], minDepth, maxDepth) / maxDepth 
+                    y_test = np.clip(y_test[0], minDepth, maxDepth) / maxDepth 
 
                     h, w = y_train.shape[0], y_train.shape[1]
 
-                    rgb_train = resize(x_train, (h,w), preserve_range=True, mode='reflect', anti_aliasing=True)
-                    rgb_test = resize(x_test, (h,w), preserve_range=True, mode='reflect', anti_aliasing=True)
+                    rgb_train = list(map(lambda x: resize(x, (h,w), preserve_range=True, mode='reflect', anti_aliasing=True), xs_train))
+                    rgb_test = list(map(lambda x: resize(x, (h,w), preserve_range=True, mode='reflect', anti_aliasing=True), xs_test))
 
                     gt_train = plasma(y_train[:,:,0])[:,:,:3]
                     gt_test = plasma(y_test[:,:,0])[:,:,:3]
 
-                    predict_train = plasma(predict(model, x_train)[0,:,:,0])[:,:,:3]
-                    predict_test = plasma(predict(model, x_test)[0,:,:,0])[:,:,:3]
+                    predict_train = plasma(predict(model, xs_train)[0,:,:,0])[:,:,:3]
+                    predict_test = plasma(predict(model, xs_test)[0,:,:,0])[:,:,:3]
 
-                    train_samples.append(np.vstack([rgb_train, gt_train, predict_train]))
-                    test_samples.append(np.vstack([rgb_test, gt_test, predict_test]))
+                    train_samples.append(np.vstack(rgb_train + [gt_train, predict_train]))
+                    test_samples.append(np.vstack(rgb_test + [gt_test, predict_test]))
 
                 self.writer.add_summary(tf.Summary(value=[tf.Summary.Value(tag='Train', image=make_image(255 * np.hstack(train_samples)))]), epoch)
                 self.writer.add_summary(tf.Summary(value=[tf.Summary.Value(tag='Test', image=make_image(255 * np.hstack(test_samples)))]), epoch)

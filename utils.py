@@ -4,10 +4,19 @@ from shape import get_shape_rgb, get_shape_depth
 
 def predict(model, images, batch_size=2):
     # Support multiple RGBs, one RGB image, even grayscale 
-    if len(images.shape) < 3: images = np.stack((images,images,images), axis=2)
-    if len(images.shape) < 4: images = images.reshape((1, images.shape[0], images.shape[1], images.shape[2]))
+
+    def normalize_image(image):
+        if len(image.shape) < 3: image = np.stack((image,image,image), axis=2)
+        if len(image.shape) < 4: image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2]))
+        return image
+
+    if isinstance(images, list): 
+        for i in range(len(images)):
+            images[i] = normalize_image(images[i])
+    else: images = normalize_image(images)
+
     # Compute predictions
-    return model.predict(images, batch_size=batch_size)
+    return model.predict(images, batch_size=1)
 
 def scale_up(scale, images):
     from skimage.transform import resize
@@ -21,11 +30,12 @@ def scale_up(scale, images):
     return np.stack(scaled)
 
 def load_images(image_files):
+    print(image_files)
     loaded_images = []
     for file in image_files:
         x = np.clip(np.asarray(Image.open( file ), dtype=float) / 255, 0, 1)
         loaded_images.append(x)
-    return np.stack(loaded_images, axis=0)
+    return loaded_images # np.stack(loaded_images, axis=0)
 
 def to_multichannel(i):
     if i.shape[2] == 3: return i
@@ -46,10 +56,16 @@ def display_images(outputs, inputs=None, gt=None, is_colormap=True, is_rescale=T
     for i in range(outputs.shape[0]):
         imgs = []
         
-        if isinstance(inputs, (list, tuple, np.ndarray)):
+        if isinstance(inputs, np.ndarray):
             x = to_multichannel(inputs[i])
             x = resize(x, shape, preserve_range=True, mode='reflect', anti_aliasing=True )
             imgs.append(x)
+        elif isinstance(inputs, list):
+            for _input in inputs:
+                x = to_multichannel(_input[i])
+                x = resize(x, shape, preserve_range=True, mode='reflect', anti_aliasing=True )
+                imgs.append(x)
+        
 
         if isinstance(gt, (list, tuple, np.ndarray)):
             x = to_multichannel(gt[i])
@@ -90,21 +106,27 @@ def load_test_data(test_data_zip_file='color_disparity_data.zip'):
 
     shape_rgb = get_shape_rgb(batch_size=n)
     shape_depth = get_shape_depth(batch_size=n, halved=True)
+    nr_inputs = len(dataset[0]) - 2
 
-    rgb, depth = np.zeros( shape_rgb ), np.zeros( shape_depth )
+    batch_y = np.zeros(shape_depth)
+    batches_x = []
+    for _ in range(nr_inputs):
+        batches_x.append(np.zeros(shape_rgb))
 
     from io import BytesIO
     for i in range(n):
         sample = dataset[i]
 
-        x = np.clip(np.asarray(Image.open( BytesIO(data[sample[0]]) )).reshape(get_shape_rgb())/255,0,1)
-        y = np.clip(np.asarray(Image.open( BytesIO(data[sample[1]]) )).reshape(get_shape_depth())/255,0,1)
+        for input_nr in range(nr_inputs):
+            x = np.clip(np.asarray(Image.open( BytesIO(data[sample[input_nr]]) )).reshape(get_shape_rgb())/255,0,1)
+            x = resize(x, get_shape_rgb()[1])
+            batches_x[input_nr][i] = x
 
-        rgb[i] = resize(x, get_shape_rgb()[1])
-        depth[i] = resize(y, get_shape_depth(halved=True)[0])
+        y = np.clip(np.asarray(Image.open( BytesIO(data[sample[-2]]) )).reshape(get_shape_depth())/255,0,1)
+        batch_y[i] = resize(y, get_shape_depth(halved=True)[0])
 
     print('Test data loaded.\n')
-    return {'rgb':rgb, 'depth':depth, 'crop':None}
+    return {'rgb':batches_x, 'depth':batch_y, 'crop':None}
 
 def compute_errors(gt, pred):
     thresh = np.maximum((gt / pred), (pred / gt))

@@ -34,7 +34,6 @@ print('\nModel loaded ({0}).'.format(args.model))
 
 # Input images
 inputs = load_images( glob.glob(args.input) )
-print('\nLoaded ({0}) images of size {1}.'.format(inputs.shape[0], inputs.shape[1:]))
 
 # Compute results
 outputs = predict(model, inputs)
@@ -44,10 +43,11 @@ outputs = predict(model, inputs)
 
 # Display results
 viz = display_images(outputs.copy(), inputs.copy(), is_colormap=False)
-split_path = os.path.split(os.path.normpath(args.input))
-print(split_path)
-path = split_path[-2] + split_path[-1]
+split_path = os.path.normpath(args.input).split('/')
+if len(split_path) < 2: path = 'test.png'
+else: path = split_path[-2] + '_pred.png'
 
+print('saved at', path)
 # cv.imwrite(path, np.uint8(viz*255))
 
 plt.figure(figsize=(10,5))
