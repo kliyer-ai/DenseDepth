@@ -82,7 +82,9 @@ optimizer = Adam(lr=args.lr, amsgrad=True)
 # Compile the model
 print('\n\n\n', 'Compiling model..', runID, '\n\n\tGPU ' + (str(args.gpus)+' gpus' if args.gpus > 1 else args.gpuids)
         + '\t\tBatch size [ ' + str(args.bs) + ' ] ' + ' \n\n')
-metrics = [abs_rel, rmse, point_wise_depth, edges, ssim]
+
+metrics = []
+# metrics = [abs_rel, rmse, point_wise_depth, edges, ssim]
 model.compile(loss=depth_loss_function, optimizer=optimizer, metrics=metrics)
 
 print('Ready for training!\n') 

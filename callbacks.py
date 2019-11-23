@@ -5,7 +5,7 @@ from PIL import Image
 
 import keras
 from keras import backend as K
-from utils import predict, evaluate, compute_errors
+from utils import predict, evaluate, compute_errors, scale_up
 
 import tensorflow as tf
 
@@ -73,7 +73,7 @@ def get_callbacks(model, basemodel, train_generator, test_generator, runPath, te
 
                 # Metrics
                 # e = evaluate(model, test_set['rgb'], test_set['depth'], test_set['crop'], batch_size=6, verbose=True)
-                e = compute_errors(y_test, y_hat_test)
+                e = compute_errors(np.stack(y_test, axis=0), np.stack(y_hat_test, axis=0))
                 logs.update({'rel': e[3]})
                 logs.update({'rms': e[4]})
                 logs.update({'log10': e[5]})
