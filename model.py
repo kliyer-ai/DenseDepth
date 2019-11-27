@@ -57,8 +57,8 @@ def create_model(existing='', encoder='dense169', is_halffeatures=True, nr_input
         # spatially integrate
         if nr_inputs > 1:
             reduce_depth = Conv2D(filters=decode_filters, kernel_size=1, padding='same', input_shape=base_model_output_shape, name='conv2')
-            encoders = list(map(lambda model: reduce_depth(model.output), encoders))
-            decoder = Concatenate(name='outputs_concat')(encoders)
+            decoders = list(map(lambda model: reduce_depth(model.output), encoders))
+            decoder = Concatenate(name='outputs_concat')(decoders)
             decoder = Conv2D(filters=decode_filters, kernel_size=1, padding='same', name='conv_integrate0')(decoder)
             decoder = Conv2D(filters=decode_filters, kernel_size=3, padding='same', name='conv_integrate1')(decoder)
             # decoder = Conv2D(filters=int(decode_filters/2), kernel_size=3, padding='same', name='conv_integrate2')(decoder)
