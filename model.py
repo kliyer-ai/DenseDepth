@@ -33,10 +33,8 @@ def create_model(existing='', encoder='dense169', is_halffeatures=True, nr_input
 
         # Starting point for decoder
         base_model_output_shape = base_model.layers[-1].get_output_at(0).shape
-        multi_model_output_shape = list(base_model_output_shape)
-        multi_model_output_shape[-1] = multi_model_output_shape[-1] * len(encoders)
-
-        
+        # multi_model_output_shape = list(base_model_output_shape)
+        # multi_model_output_shape[-1] = multi_model_output_shape[-1] * len(encoders)
 
         # Starting number of decoder filters
         if is_halffeatures:
@@ -56,15 +54,17 @@ def create_model(existing='', encoder='dense169', is_halffeatures=True, nr_input
 
         # Decoder Layers
         
-        # reduce filters
-        decoder = Concatenate(name='outputs_concat')(list(map(lambda model: model.output, encoders))) if nr_inputs > 1 else base_model.output
-        decoder = Conv2D(filters=decode_filters, kernel_size=1, padding='same', input_shape=multi_model_output_shape, name='conv2')(decoder)
-        
         # spatially integrate
         if nr_inputs > 1:
+            reduce_depth = Conv2D(filters=decode_filters, kernel_size=1, padding='same', input_shape=base_model_output_shape, name='conv2')
+            encoders = list(map(lambda model: reduce_depth(model.output), encoders))
+            decoder = Concatenate(name='outputs_concat')(encoders)
+            decoder = Conv2D(filters=decode_filters, kernel_size=1, padding='same', name='conv_integrate0')(decoder)
             decoder = Conv2D(filters=decode_filters, kernel_size=3, padding='same', name='conv_integrate1')(decoder)
-            decoder = Conv2D(filters=int(decode_filters/2), kernel_size=3, padding='same', name='conv_integrate2')(decoder)
-            decode_filters = decode_filters // 2
+            # decoder = Conv2D(filters=int(decode_filters/2), kernel_size=3, padding='same', name='conv_integrate2')(decoder)
+            # decode_filters = decode_filters // 2
+        else:
+            decoder = Conv2D(filters=decode_filters, kernel_size=1, padding='same', input_shape=base_model_output_shape, name='conv2')(base_model.output)
 
         decoder = upproject(decoder, int(decode_filters/2), 'up1', concat_with='pool3_pool')
         decoder = upproject(decoder, int(decode_filters/4), 'up2', concat_with='pool2_pool')
