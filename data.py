@@ -35,10 +35,10 @@ def get_train_test_data(batch_size, data_zipfile, nr_inputs=1):
     return train_generator, test_generator
 
 class BasicRGBSequence(Sequence):
-    def __init__(self, data, dataset, batch_size, nr_inputs=1, train=False ,is_flip=True, is_addnoise=False, is_erase=False):
+    def __init__(self, data, dataset, batch_size, nr_inputs=1, train=False, is_addnoise=False, is_erase=False):
         self.data = data
         self.dataset = dataset
-        self.policy = BasicPolicy( color_change_ratio=0.50, mirror_ratio=0.50, flip_ratio=0.0 if not is_flip else 0.50, 
+        self.policy = BasicPolicy( color_change_ratio=0.50, mirror_ratio=0.0, flip_ratio=0.50, 
                                     add_noise_peak=0 if not is_addnoise else 20, erase_ratio=0.0 if not is_erase else 0.50)
         self.batch_size = batch_size
         self.train = train
