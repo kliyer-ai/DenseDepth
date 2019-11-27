@@ -90,7 +90,8 @@ model.compile(loss=depth_loss_function, optimizer=optimizer, metrics=metrics)
 print('Ready for training!\n') 
 
 # Callbacks
-callbacks = get_callbacks(model, basemodel, train_generator, test_generator, runPath, load_test_data(args.data, nr_inputs=args.nr_inputs) if args.full else None)
+# , load_test_data(args.data, nr_inputs=args.nr_inputs) if args.full else None
+callbacks = get_callbacks(model, basemodel, train_generator, test_generator, runPath)
 
 # Start training
 model.fit_generator(train_generator, callbacks=callbacks, validation_data=test_generator, epochs=args.epochs, shuffle=True)
