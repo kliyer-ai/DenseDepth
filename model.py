@@ -61,8 +61,11 @@ def create_model(existing='', encoder='dense169', is_halffeatures=True, nr_input
             decoder = Concatenate(name='outputs_concat')(decoders)
             decoder = Conv2D(filters=decode_filters, kernel_size=1, padding='same', name='conv_integrate0')(decoder)
             decoder = Conv2D(filters=decode_filters, kernel_size=3, padding='same', name='conv_integrate1')(decoder)
-            # decoder = Conv2D(filters=int(decode_filters/2), kernel_size=3, padding='same', name='conv_integrate2')(decoder)
-            # decode_filters = decode_filters // 2
+
+            # optional
+            if False:
+                decoder = Conv2D(filters=int(decode_filters/2), kernel_size=3, padding='same', name='conv_integrate2')(decoder)
+                decode_filters = decode_filters // 2
         else:
             decoder = Conv2D(filters=decode_filters, kernel_size=1, padding='same', input_shape=base_model_output_shape, name='conv2')(base_model.output)
 
@@ -89,8 +92,6 @@ def create_model(existing='', encoder='dense169', is_halffeatures=True, nr_input
     
     return model
 
-
-import re
 
 def add_input(model):
 
@@ -123,7 +124,6 @@ def add_input(model):
         if len(layer_input) == 1:
             layer_input = layer_input[0]
 
-        # Insert layer if name matches the regular expression
         x = layer(layer_input)
 
         # Set new output tensor (the original one, or the one of the inserted
