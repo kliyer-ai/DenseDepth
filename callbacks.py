@@ -48,8 +48,8 @@ def get_callbacks(model, basemodel, train_generator, test_generator, runPath):
                 xs_train = list(map(lambda x: x[0], xs_train))
                 xs_test = list(map(lambda x: x[0], xs_test))
 
-                y_train = np.clip(y_train[0], minDepth, maxDepth) / maxDepth 
-                y_test = np.clip(y_test[0], minDepth, maxDepth) / maxDepth 
+                y_train = y_train[0]
+                y_test = y_test[0] 
 
                 h, w = y_train.shape[0], y_train.shape[1]
 
