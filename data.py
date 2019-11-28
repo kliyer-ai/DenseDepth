@@ -74,7 +74,7 @@ class BasicRGBSequence(Sequence):
                 x = resize(x, get_shape_rgb()[1])
                 xs.append(x)
 
-            y = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[-2]]) )).reshape(get_shape_depth())/255,0,1).copy().astype(float)
+            y = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[-2]]) )).reshape(get_shape_depth())/255,0,1)
             y = resize(y, get_shape_depth(halved=True)[1])
 
             if self.train and is_apply_policy: xs, y = self.policy(xs, y)
