@@ -1,6 +1,7 @@
 import numpy as np
 from PIL import Image
 from shape import get_shape_rgb, get_shape_depth
+from keras.backend import epsilon
 
 def predict(model, images, batch_size=2):
     # Support multiple RGBs, one RGB image, even grayscale 
@@ -128,14 +129,15 @@ def load_test_data(test_data_zip_file, nr_inputs=1):
     return {'rgb':batches_x, 'depth':batch_y, 'crop':None}
 
 def compute_errors(gt, pred):
-    thresh = np.maximum((gt / pred), (pred / gt))
+    eps = epsilon()
+    thresh = np.maximum((gt / (pred+eps)), (pred / (gt+eps)))
     a1 = (thresh < 1.25   ).mean()
     a2 = (thresh < 1.25 ** 2).mean()
     a3 = (thresh < 1.25 ** 3).mean()
-    abs_rel = np.mean(np.abs(gt - pred) / gt)
+    abs_rel = np.mean(np.abs(gt - pred) / (gt+eps))
     rmse = (gt - pred) ** 2
     rmse = np.sqrt(rmse.mean())
-    log_10 = (np.abs(np.log10(gt)-np.log10(pred))).mean()
+    log_10 = (np.abs(np.log10(gt+eps)-np.log10(pred+eps))).mean()
     return a1, a2, a3, abs_rel, rmse, log_10
 
 def evaluate(model, rgb, depth, crop, batch_size=6, verbose=False):
