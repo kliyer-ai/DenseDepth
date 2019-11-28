@@ -1,7 +1,8 @@
 import numpy as np
 from PIL import Image
 from shape import get_shape_rgb, get_shape_depth
-from keras.backend import epsilon
+import keras.backend as K
+
 
 def predict(model, images, batch_size=2):
     # Support multiple RGBs, one RGB image, even grayscale 
@@ -128,8 +129,17 @@ def load_test_data(test_data_zip_file, nr_inputs=1):
     print('Test data loaded.\n')
     return {'rgb':batches_x, 'depth':batch_y, 'crop':None}
 
+
+def normalize_disparity(y):
+    centered = y - np.min(y)
+    return centered / np.max(centered)
+
+
 def compute_errors(gt, pred):
-    eps = epsilon()
+    gt = normalize_disparity(gt)
+    pred = normalize_disparity(pred)
+    eps = K.epsilon()
+
     thresh = np.maximum((gt / (pred+eps)), (pred / (gt+eps)))
     a1 = (thresh < 1.25   ).mean()
     a2 = (thresh < 1.25 ** 2).mean()
