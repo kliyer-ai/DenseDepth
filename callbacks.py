@@ -28,7 +28,7 @@ def get_callbacks(model, basemodel, train_generator, test_generator, runPath):
 
             self.num_samples = 6
             self.train_idx =  np.random.randint(low=0, high=len(train_generator), size=self.num_samples)
-            self.test_idx = list(range(6)) # np.random.randint(low=0, high=len(test_generator), size=10)
+            self.test_idx = np.array(range(self.num_samples)) * (len(test_generator) // self.num_samples) # np.random.randint(low=0, high=len(test_generator), size=10)
 
         def on_epoch_end(self, epoch, logs=None):            
             # Samples using current model
