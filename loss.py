@@ -1,6 +1,5 @@
 import keras.backend as K
 import tensorflow as tf
-from utils import normalize_disparity
 
 def depth_loss_function(y_true, y_pred):
     return ssim(y_true, y_pred) + edges(y_true, y_pred) + point_wise_depth(y_true, y_pred)
