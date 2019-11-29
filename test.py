@@ -46,6 +46,7 @@ inputs = load_images( glob.glob(args.input) )
 # GT
 base_path, _ = os.path.split(args.input)
 gt = np.clip(np.asarray(Image.open( os.path.join(base_path, 'gt.png') ), dtype=float) / 255, 0, 1)
+# downsample
 gt = resize(gt, get_shape_depth(halved=True), preserve_range=True, mode='reflect', anti_aliasing=True )
 print_info(gt)
 
