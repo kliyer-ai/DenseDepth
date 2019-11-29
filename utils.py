@@ -130,24 +130,20 @@ def load_test_data(test_data_zip_file, nr_inputs=1):
     return {'rgb':batches_x, 'depth':batch_y, 'crop':None}
 
 
-def normalize_disparity(y):
-    centered = y - np.min(y)
-    return centered / np.max(centered)
-
-
 def compute_errors(gt, pred):
-    gt = normalize_disparity(gt)
-    pred = normalize_disparity(pred)
-    eps = K.epsilon()
+    pred = np.clip(pred, 0 , 1)
+    gt = np.clip(gt, 0, 1)
+    pred = pred * 255 + 1
+    gt = gt * 255 + 1
 
-    thresh = np.maximum((gt / (pred+eps)), (pred / (gt+eps)))
+    thresh = np.maximum((gt / pred), (pred / gt))
     a1 = (thresh < 1.25   ).mean()
     a2 = (thresh < 1.25 ** 2).mean()
     a3 = (thresh < 1.25 ** 3).mean()
-    abs_rel = np.mean(np.abs(gt - pred) / (gt+eps))
+    abs_rel = np.mean(np.abs(gt - pred) / gt)
     rmse = (gt - pred) ** 2
     rmse = np.sqrt(rmse.mean())
-    log_10 = (np.abs(np.log10(gt+eps)-np.log10(pred+eps))).mean()
+    log_10 = (np.abs(np.log10(gt)-np.log10(pred))).mean()
     return a1, a2, a3, abs_rel, rmse, log_10
 
 def evaluate(model, rgb, depth, crop, batch_size=6, verbose=False):
