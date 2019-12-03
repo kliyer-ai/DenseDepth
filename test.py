@@ -48,11 +48,11 @@ base_path, _ = os.path.split(args.input)
 gt = np.clip(np.asarray(Image.open( os.path.join(base_path, 'gt.png') ), dtype=float) / 255, 0, 1)
 # downsample
 gt = resize(gt, get_shape_depth(halved=True), preserve_range=True, mode='reflect', anti_aliasing=True )
-print_info(gt)
+# print_info(gt)
 
 # Compute results
 output = predict(model, inputs)
-print_info(output)
+# print_info(output)
 
 metrics = compute_errors(gt, np.reshape(output, get_shape_depth(halved=True)))
 print("{:>10}, {:>10}, {:>10}, {:>10}, {:>10}, {:>10}".format('a1', 'a2', 'a3', 'rel', 'rms', 'log_10'))
