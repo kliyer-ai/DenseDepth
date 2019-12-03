@@ -26,7 +26,7 @@ parser.add_argument('--bs', type=int, default=4, help='Batch size')
 parser.add_argument('--epochs', type=int, default=20, help='Number of epochs')
 parser.add_argument('--gpus', type=int, default=1, help='The number of GPUs to use')
 parser.add_argument('--gpuids', type=str, default='0', help='IDs of GPUs to use')
-parser.add_argument('--name', type=str, default='wires', help='A name to attach to the training session')
+parser.add_argument('--name', type=str, default='default', help='A name to attach to the training session')
 parser.add_argument('--checkpoint', type=str, default='', help='Start training from an existing model.')
 parser.add_argument('--full', dest='full', action='store_true', help='Full training with metrics, checkpoints, and image samples.')
 parser.add_argument('--nr_inputs', type=int, default=1, help='Number of images to use.')
@@ -49,7 +49,7 @@ model = create_model( existing=args.checkpoint, encoder=args.encoder,  nr_inputs
 train_generator, test_generator = get_train_test_data( args.bs, data_zipfile=args.data, nr_inputs=args.nr_inputs)
 
 # Training session details
-runID = datetime.now().strftime('%d-%b-%H:%M') + '-m' + args.encoder + '-e' + str(args.epochs) + '-bs' + str(args.bs) + '-lr' + str(args.lr) + '-' + args.name
+runID = datetime.now().strftime('%d-%b-%H:%M') + '-m' + args.encoder + '-e' + str(args.epochs) + '-bs' + str(args.bs) + '-lr' + str(args.lr) + '-ipts' + str(args.nr_inputs) + '-' + args.name
 outputPath = './models/'
 runPath = outputPath + runID
 pathlib.Path(runPath).mkdir(parents=True, exist_ok=True)
