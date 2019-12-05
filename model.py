@@ -2,9 +2,16 @@ import sys
 
 from keras import applications
 from keras.models import Model, load_model, Sequential
-from keras.layers import Input, InputLayer, Conv2D, Activation, LeakyReLU, Concatenate
+from keras.layers import Input, InputLayer, Conv2D, Activation, LeakyReLU, Concatenate, Lambda
 from layers import BilinearUpSampling2D
 from loss import depth_loss_function
+from bilinear_sampler import bilinear_sampler_1d_h
+
+def generate_image_left(img, disp):
+    return bilinear_sampler_1d_h(img, -disp)
+
+def generate_image_right(img, disp):
+    return bilinear_sampler_1d_h(img, disp)
 
 def create_model(existing='', encoder='dense169', is_halffeatures=True, nr_inputs=1):
         
@@ -30,6 +37,8 @@ def create_model(existing='', encoder='dense169', is_halffeatures=True, nr_input
             encoders.append(add_input(base_model))
 
         print('Base model loaded.')
+
+        input_tensor = base_model.inputs[0]
 
         # Starting point for decoder
         base_model_output_shape = base_model.layers[-1].get_output_at(0).shape
@@ -73,13 +82,14 @@ def create_model(existing='', encoder='dense169', is_halffeatures=True, nr_input
         decoder = upproject(decoder, int(decode_filters/4), 'up2', concat_with='pool2_pool')
         decoder = upproject(decoder, int(decode_filters/8), 'up3', concat_with='pool1')
         decoder = upproject(decoder, int(decode_filters/16), 'up4', concat_with='conv1/relu')
-        if False: decoder = upproject(decoder, int(decode_filters/32), 'up5', concat_with='input_1')
+        if True: decoder = upproject(decoder, int(decode_filters/32), 'up5', concat_with='input_1')
 
         # Extract depths (final layer)
         conv3 = Conv2D(filters=1, kernel_size=3, strides=1, padding='same', name='conv3')(decoder)
+        out = Lambda(lambda x: bilinear_sampler_1d_h(input_tensor, x))(conv3)
 
         # Create the model
-        model = Model(inputs=list(map(lambda model: model.input, encoders)), outputs=conv3)
+        model = Model(inputs=list(map(lambda model: model.input, encoders)), outputs=[conv3, out])
     else:
         # Load model from file
         if not existing.endswith('.h5'):

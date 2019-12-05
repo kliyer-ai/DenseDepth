@@ -4,7 +4,7 @@ from datetime import datetime
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '5'
 
 # Kerasa / TensorFlow
-from loss import depth_loss_function
+from loss import depth_loss_function, reconstruction_loss_function
 from utils import predict, save_images, load_test_data
 from model import create_model
 from data import get_train_test_data
@@ -13,9 +13,6 @@ from callbacks import get_callbacks
 from keras.optimizers import Adam
 from keras.utils import multi_gpu_model
 from keras.utils.vis_utils import plot_model
-
-from loss import point_wise_depth, edges, ssim
-from metrics import *
 
 # Argument Parser
 parser = argparse.ArgumentParser(description='High Quality Monocular Depth Estimation via Transfer Learning')
@@ -85,7 +82,7 @@ print('\n\n\n', 'Compiling model..', runID, '\n\n\tGPU ' + (str(args.gpus)+' gpu
 
 metrics = []
 # metrics = [abs_rel, rmse, point_wise_depth, edges, ssim]
-model.compile(loss=depth_loss_function, optimizer=optimizer, metrics=metrics)
+model.compile(loss=[depth_loss_function, reconstruction_loss_function], loss_weights=[0.0, 1.0], optimizer=optimizer, metrics=metrics)
 
 print('Ready for training!\n') 
 

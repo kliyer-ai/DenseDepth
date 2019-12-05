@@ -48,24 +48,24 @@ def get_callbacks(model, basemodel, train_generator, test_generator, runPath):
                 xs_train = list(map(lambda x: x[0], xs_train))
                 xs_test = list(map(lambda x: x[0], xs_test))
 
-                y_train = y_train[0]
-                y_test = y_test[0] 
+                disp_train, _ = list(map(lambda x: x[0], y_train))
+                disp_test, _  = list(map(lambda x: x[0], y_test))
 
-                h, w = y_train.shape[0], y_train.shape[1]
+                h, w = disp_train.shape[0], disp_train.shape[1]
 
                 rgb_train = list(map(lambda x: resize(x, (h,w), preserve_range=True, mode='reflect', anti_aliasing=True), xs_train))
                 rgb_test = list(map(lambda x: resize(x, (h,w), preserve_range=True, mode='reflect', anti_aliasing=True), xs_test))
 
-                gt_train = plasma(y_train[:,:,0])[:,:,:3]
-                gt_test = plasma(y_test[:,:,0])[:,:,:3]
+                gt_train = plasma(disp_train[:,:,0])[:,:,:3]
+                gt_test = plasma(disp_test[:,:,0])[:,:,:3]
 
-                y_hat_train = predict(model, xs_train)
-                predict_train = plasma(y_hat_train[0,:,:,0])[:,:,:3]
-                y_hat_test = predict(model, xs_test)
-                predict_test = plasma(y_hat_test[0,:,:,0])[:,:,:3]
+                disp_pred_train, reconstruction_train = predict(model, xs_train)
+                predict_train = plasma(disp_pred_train[0,:,:,0])[:,:,:3]
+                disp_pred_test, reconstruction_test = predict(model, xs_test)
+                predict_test = plasma(disp_pred_test[0,:,:,0])[:,:,:3]
 
-                train_samples.append(np.vstack(rgb_train + [gt_train, predict_train]))
-                test_samples.append(np.vstack(rgb_test + [gt_test, predict_test]))
+                train_samples.append(np.vstack(rgb_train + [gt_train, predict_train, reconstruction_train]))
+                test_samples.append(np.vstack(rgb_test + [gt_test, predict_test, reconstruction_test]))
 
             self.writer.add_summary(tf.Summary(value=[tf.Summary.Value(tag='Train', image=make_image(255 * np.hstack(train_samples)))]), epoch)
             self.writer.add_summary(tf.Summary(value=[tf.Summary.Value(tag='Test', image=make_image(255 * np.hstack(test_samples)))]), epoch)

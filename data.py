@@ -53,14 +53,15 @@ class BasicRGBSequence(Sequence):
     def __len__(self):
         return int(np.ceil(self.N / float(self.batch_size)))
 
-    def __getitem__(self, idx, is_apply_policy=True):
-        shape_rgb = get_shape_rgb(batch_size=self.batch_size)
-        shape_depth = get_shape_depth(batch_size=self.batch_size, halved=True)
+    def __getitem__(self, idx, is_apply_policy=False):
+        disp_is_halved = False
+        batch_ys = [] 
+        batch_ys.append(np.zeros(get_shape_depth(batch_size=self.batch_size, halved=disp_is_halved))) 
+        batch_ys.append(np.zeros(get_shape_rgb(batch_size=self.batch_size, halved=disp_is_halved))) 
 
-        batch_y = np.zeros(shape_depth)
-        batches_x = []
+        batch_xs = []
         for _ in range(self.nr_inputs):
-            batches_x.append(np.zeros(shape_rgb))
+            batch_xs.append(np.zeros(get_shape_rgb(batch_size=self.batch_size)))
 
 
         # Augmentation of RGB images
@@ -74,17 +75,21 @@ class BasicRGBSequence(Sequence):
                 x = resize(x, get_shape_rgb()[1])
                 xs.append(x)
 
-            y = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[-2]]) )).reshape(get_shape_depth())/255,0,1)
-            y = resize(y, get_shape_depth(halved=True)[1])
+            disparity = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[-2]]) )).reshape(get_shape_depth(halved=disp_is_halved))/255,0,1)
+            disparity = resize(disparity, get_shape_depth(halved=disp_is_halved)[1])
+
+            y = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[-3]]) )).reshape(get_shape_rgb(halved=disp_is_halved))/255,0,1)
+            y = resize(y, get_shape_rgb(halved=disp_is_halved)[1])
 
             if self.train and is_apply_policy: xs, y = self.policy(xs, y)
 
             for input_nr, x in enumerate(xs):
-                batches_x[input_nr][i] = x
-            batch_y[i] = y
+                batch_xs[input_nr][i] = x
+            batch_ys[0][i] = disparity
+            batch_ys[1][i] = y
 
             # DEBUG:
             #self.policy.debug_img(batch_x[i], np.clip(DepthNorm(batch_y[i])/maxDepth,0,1), idx, i)
         #exit()
 
-        return batches_x, batch_y
+        return batch_xs, batch_ys
