@@ -18,43 +18,37 @@ def create_model(existing='', encoder='dense169', is_halffeatures=True, nr_input
     if len(existing) == 0:
         print('Loading base model (DenseNet)..')
 
-        encoders = []
-
         # Encoder Layers
         if encoder=='dense201':
-            encoders.append(applications.DenseNet201(input_shape=(None, None, 3), include_top=False)) 
+            left_model = applications.DenseNet201(input_shape=(None, None, 3), include_top=False) 
         elif encoder=='dense169':
-            encoders.append(applications.DenseNet169(input_shape=(None, None, 3), include_top=False)) 
+            left_model = applications.DenseNet169(input_shape=(None, None, 3), include_top=False) 
         elif encoder=='dense121':
-            encoders.append(applications.DenseNet121(input_shape=(None, None, 3), include_top=False)) 
-
-        base_model = encoders[0]
+            left_model = applications.DenseNet121(input_shape=(None, None, 3), include_top=False) 
 
         # Layer freezing?
-        for layer in base_model.layers: layer.trainable = True
+        for layer in left_model.layers: layer.trainable = True
 
-        for _ in range(nr_inputs-1):
-            encoders.append(add_input(base_model))
+        right_model = add_input(left_model)
 
         print('Base model loaded.')
 
-        input_tensor = base_model.inputs[0]
+        left_input_tensor = left_model.input
+        right_input_tensor = right_model.input
 
         # Starting point for decoder
-        base_model_output_shape = base_model.layers[-1].get_output_at(0).shape
-        # multi_model_output_shape = list(base_model_output_shape)
-        # multi_model_output_shape[-1] = multi_model_output_shape[-1] * len(encoders)
+        left_model_output_shape = left_model.layers[-1].get_output_at(0).shape
 
         # Starting number of decoder filters
         if is_halffeatures:
-            decode_filters = int(base_model_output_shape[-1]) // 2
+            decode_filters = int(left_model_output_shape[-1]) // 2
         else:
-            decode_filters = int(base_model_output_shape[-1]) 
+            decode_filters = int(left_model_output_shape[-1]) 
 
         # Define upsampling layer
         def upproject(tensor, filters, name, concat_with):
             up_i = BilinearUpSampling2D((2, 2), name=name+'_upsampling2d')(tensor)
-            up_i = Concatenate(name=name+'_concat')([up_i, base_model.get_layer(concat_with).get_output_at(0)]) # Skip connection
+            up_i = Concatenate(name=name+'_concat')([up_i, left_model.get_layer(concat_with).get_output_at(0)]) # Skip connection
             up_i = Conv2D(filters=filters, kernel_size=3, strides=1, padding='same', name=name+'_convA')(up_i)
             up_i = LeakyReLU(alpha=0.2)(up_i)
             up_i = Conv2D(filters=filters, kernel_size=3, strides=1, padding='same', name=name+'_convB')(up_i)
@@ -62,21 +56,7 @@ def create_model(existing='', encoder='dense169', is_halffeatures=True, nr_input
             return up_i
 
         # Decoder Layers
-        
-        # spatially integrate
-        if nr_inputs > 1:
-            reduce_depth = Conv2D(filters=decode_filters, kernel_size=1, padding='same', input_shape=base_model_output_shape, name='conv2')
-            decoders = list(map(lambda model: reduce_depth(model.output), encoders))
-            decoder = Concatenate(name='outputs_concat')(decoders)
-            decoder = Conv2D(filters=decode_filters, kernel_size=1, padding='same', name='conv_integrate0')(decoder)
-            decoder = Conv2D(filters=decode_filters, kernel_size=3, padding='same', name='conv_integrate1')(decoder)
-
-            # optional
-            if False:
-                decoder = Conv2D(filters=int(decode_filters/2), kernel_size=3, padding='same', name='conv_integrate2')(decoder)
-                decode_filters = decode_filters // 2
-        else:
-            decoder = Conv2D(filters=decode_filters, kernel_size=1, padding='same', input_shape=base_model_output_shape, name='conv2')(base_model.output)
+        decoder = Conv2D(filters=decode_filters, kernel_size=1, padding='same', input_shape=left_model_output_shape, name='conv2')(left_model.output)
 
         decoder = upproject(decoder, int(decode_filters/2), 'up1', concat_with='pool3_pool')
         decoder = upproject(decoder, int(decode_filters/4), 'up2', concat_with='pool2_pool')
@@ -85,11 +65,11 @@ def create_model(existing='', encoder='dense169', is_halffeatures=True, nr_input
         if True: decoder = upproject(decoder, int(decode_filters/32), 'up5', concat_with='input_1')
 
         # Extract depths (final layer)
-        conv3 = Conv2D(filters=1, kernel_size=3, strides=1, padding='same', name='conv3')(decoder)
-        out = Lambda(lambda x: bilinear_sampler_1d_h(input_tensor, x))(conv3)
+        disp_left = Conv2D(filters=1, kernel_size=3, strides=1, padding='same', name='disp_left')(decoder)
+        left_reconstruction = Lambda(lambda x: generate_image_left(right_input_tensor, x))(disp_left)
 
         # Create the model
-        model = Model(inputs=list(map(lambda model: model.input, encoders)), outputs=[conv3, out])
+        model = Model(inputs=[left_model.input, right_model.input], outputs=[disp_left, left_reconstruction])
     else:
         # Load model from file
         if not existing.endswith('.h5'):

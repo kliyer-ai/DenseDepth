@@ -20,7 +20,7 @@ def get_data(batch_size, data_zipfile):
     test = list((row.split(',') for row in (data['data/test.csv']).decode("utf-8").split('\n') if len(row) > 0))
 
     # Helpful for testing...
-    if False:
+    if True:
         train = train[:10]
         test = test[:10]
 
@@ -55,41 +55,39 @@ class BasicRGBSequence(Sequence):
 
     def __getitem__(self, idx, is_apply_policy=False):
         disp_is_halved = False
-        batch_ys = [] 
-        batch_ys.append(np.zeros(get_shape_depth(batch_size=self.batch_size, halved=disp_is_halved))) 
-        batch_ys.append(np.zeros(get_shape_rgb(batch_size=self.batch_size, halved=disp_is_halved))) 
 
-        batch_xs = []
-        for _ in range(self.nr_inputs):
-            batch_xs.append(np.zeros(get_shape_rgb(batch_size=self.batch_size)))
+        disp_ph = np.zeros(get_shape_depth(batch_size=self.batch_size, halved=disp_is_halved))
+        left_image_ph = np.zeros(get_shape_rgb(batch_size=self.batch_size))
+        right_image_ph = np.zeros(get_shape_rgb(batch_size=self.batch_size))
 
+        batch_x = [left_image_ph, right_image_ph]
+        batch_y = [disp_ph, [left_image_ph.copy(), right_image_ph.copy()]]
 
         # Augmentation of RGB images
         for i in range(self.batch_size):
             index = min((idx * self.batch_size) + i, self.N-1)
             sample = self.dataset[index]
 
-            xs = []
-            for input_nr in range(self.nr_inputs):
-                x = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[input_nr]]) )).reshape(get_shape_rgb())/255,0,1)
-                x = resize(x, get_shape_rgb()[1])
-                xs.append(x)
+            left_image = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[0]]) )).reshape(get_shape_rgb())/255,0,1)
+            left_image = resize(left_image, get_shape_rgb()[1])
+            right_image = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[1]]) )).reshape(get_shape_rgb())/255,0,1)
+            right_image = resize(right_image, get_shape_rgb()[1])
 
             disparity = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[-2]]) )).reshape(get_shape_depth(halved=disp_is_halved))/255,0,1)
             disparity = resize(disparity, get_shape_depth(halved=disp_is_halved)[1])
 
-            y = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[-3]]) )).reshape(get_shape_rgb(halved=disp_is_halved))/255,0,1)
-            y = resize(y, get_shape_rgb(halved=disp_is_halved)[1])
 
             if self.train and is_apply_policy: xs, y = self.policy(xs, y)
 
-            for input_nr, x in enumerate(xs):
-                batch_xs[input_nr][i] = x
-            batch_ys[0][i] = disparity
-            batch_ys[1][i] = y
+            batch_x[0][i] = left_image
+            batch_x[1][i] = right_image
+            
+            batch_y[0][i] = disparity
+            batch_y[1][0][i] = left_image.copy()
+            batch_y[1][1][i] = right_image.copy()
 
             # DEBUG:
             #self.policy.debug_img(batch_x[i], np.clip(DepthNorm(batch_y[i])/maxDepth,0,1), idx, i)
         #exit()
 
-        return batch_xs, batch_ys
+        return batch_x, batch_y

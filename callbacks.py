@@ -60,8 +60,13 @@ def get_callbacks(model, basemodel, train_generator, test_generator, runPath):
                 gt_test = plasma(disp_test[:,:,0])[:,:,:3]
 
                 disp_pred_train, reconstruction_train = predict(model, xs_train)
+                reconstruction_train = reconstruction_train[0,:,:,:]
+                print(reconstruction_train.shape, gt_train.shape)
                 predict_train = plasma(disp_pred_train[0,:,:,0])[:,:,:3]
+
                 disp_pred_test, reconstruction_test = predict(model, xs_test)
+                reconstruction_test = reconstruction_test[0,:,:,:]
+                print(reconstruction_test.shape)
                 predict_test = plasma(disp_pred_test[0,:,:,0])[:,:,:3]
 
                 train_samples.append(np.vstack(rgb_train + [gt_train, predict_train, reconstruction_train]))
