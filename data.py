@@ -20,7 +20,7 @@ def get_data(batch_size, data_zipfile):
     test = list((row.split(',') for row in (data['data/test.csv']).decode("utf-8").split('\n') if len(row) > 0))
 
     # Helpful for testing...
-    if True:
+    if False:
         train = train[:10]
         test = test[:10]
 
@@ -61,7 +61,7 @@ class BasicRGBSequence(Sequence):
         right_image_ph = np.zeros(get_shape_rgb(batch_size=self.batch_size))
 
         batch_x = [left_image_ph, right_image_ph]
-        batch_y = [disp_ph, [left_image_ph.copy(), right_image_ph.copy()]]
+        batch_y = [disp_ph, np.stack([left_image_ph.copy(), right_image_ph.copy()], axis=1)]
 
         # Augmentation of RGB images
         for i in range(self.batch_size):
@@ -83,11 +83,11 @@ class BasicRGBSequence(Sequence):
             batch_x[1][i] = right_image
             
             batch_y[0][i] = disparity
-            batch_y[1][0][i] = left_image.copy()
-            batch_y[1][1][i] = right_image.copy()
+            batch_y[1][i,0] = left_image.copy()
+            batch_y[1][i,1] = right_image.copy()
 
             # DEBUG:
             #self.policy.debug_img(batch_x[i], np.clip(DepthNorm(batch_y[i])/maxDepth,0,1), idx, i)
-        #exit()
+        # exit()
 
         return batch_x, batch_y

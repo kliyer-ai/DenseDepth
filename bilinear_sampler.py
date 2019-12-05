@@ -100,5 +100,5 @@ def bilinear_sampler_1d_h(input_images, x_offset, wrap_mode='border', name='bili
         _wrap_mode = wrap_mode
 
         # added clip 
-        output = _transform(input_images, tf.clip_by_value(x_offset, clip_value_min=0.0, clip_value_max=1.0))
+        output = _transform(input_images, x_offset)
         return output
