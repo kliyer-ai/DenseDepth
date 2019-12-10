@@ -61,7 +61,7 @@ class BasicRGBSequence(Sequence):
         right_image_ph = np.zeros(get_shape_rgb(batch_size=self.batch_size))
 
         batch_x = [left_image_ph, right_image_ph]
-        batch_y = [disp_ph, np.stack([left_image_ph.copy(), right_image_ph.copy()], axis=1)]
+        batch_y = [np.stack([disp_ph, disp_ph.copy()], axis=1), np.stack([left_image_ph.copy(), right_image_ph.copy()], axis=1)]
 
         # Augmentation of RGB images
         for i in range(self.batch_size):
@@ -81,7 +81,7 @@ class BasicRGBSequence(Sequence):
             batch_x[0][i] = left_image
             batch_x[1][i] = right_image
             
-            batch_y[0][i] = disparity
+            batch_y[0][i,0] = disparity
             batch_y[1][i,0] = left_image.copy()
             batch_y[1][i,1] = right_image.copy()
 

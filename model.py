@@ -23,9 +23,19 @@ def get_decoders(models, is_halffeatures=True):
             layer = BilinearUpSampling2D((2, 2), name=name+'_upsampling2d')
             tensors = list(map(lambda x: layer(x) , tensors))
 
-            # Concatenate is only layer that exists for each input
-            concat_left = Concatenate(name=name+'_concat_left')([tensors[0], models[0].get_layer(concat_with + f'_1' if concat_with == 'input' else concat_with).get_output_at(0)])
-            concat_right = Concatenate(name=name+'_concat_right')([tensors[1], models[1].get_layer(concat_with + f'_2' if concat_with == 'input' else concat_with).get_output_at(0)])
+            # Concatenate is only layer that exists separate for each input
+            if concat_with == 'input':
+                skips = [
+                    models[0].get_layer('input_1').get_output_at(0),
+                    models[1].get_layer('input_2').get_output_at(0)
+                ]
+            else:
+                skips = [
+                    models[0].get_layer(concat_with).get_output_at(0),
+                    models[1].get_layer(concat_with).get_output_at(1)
+                ]
+            concat_left = Concatenate(name=name+'_concat_left')([tensors[0], skips[0]])
+            concat_right = Concatenate(name=name+'_concat_right')([tensors[1], skips[1]])
             tensors = [concat_left, concat_right]
 
             layer = Conv2D(filters=filters, kernel_size=3, strides=1, padding='same', name=name+'_convA')
