@@ -76,7 +76,6 @@ class BasicRGBSequence(Sequence):
             disparity = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[-2]]) )).reshape(get_shape_depth(halved=disp_is_halved))/255,0,1)
             disparity = resize(disparity, get_shape_depth(halved=disp_is_halved)[1])
 
-
             if self.train and is_apply_policy: xs, y = self.policy(xs, y)
 
             batch_x[0][i] = left_image

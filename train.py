@@ -40,7 +40,7 @@ else:
     print('Will use ' + str(args.gpus) + ' GPUs.')
 
 # Create the model
-model = create_model( existing=args.checkpoint, encoder=args.encoder,  nr_inputs=args.nr_inputs)
+model = create_model( existing=args.checkpoint, encoder=args.encoder)
 
 # Data loaders 
 train_generator, test_generator = get_train_test_data( args.bs, data_zipfile=args.data, nr_inputs=args.nr_inputs)

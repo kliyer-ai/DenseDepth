@@ -6,6 +6,7 @@ from keras.layers import Input, InputLayer, Conv2D, Activation, LeakyReLU, Conca
 from layers import BilinearUpSampling2D
 from loss import depth_loss_function
 from bilinear_sampler import bilinear_sampler_1d_h
+import tensorflow as tf
 
 def generate_image_left(img, disp):
     return bilinear_sampler_1d_h(img, -disp)
@@ -13,7 +14,62 @@ def generate_image_left(img, disp):
 def generate_image_right(img, disp):
     return bilinear_sampler_1d_h(img, disp)
 
-def create_model(existing='', encoder='dense169', is_halffeatures=True, nr_inputs=1):
+def get_decoders(models, is_halffeatures=True):
+        left_img = models[0].input
+        right_img = models[1].input
+
+        # Define upsampling layer
+        def upproject(tensors, filters, name, concat_with):
+            layer = BilinearUpSampling2D((2, 2), name=name+'_upsampling2d')
+            tensors = list(map(lambda x: layer(x) , tensors))
+
+            # Concatenate is only layer that exists for each input
+            concat_left = Concatenate(name=name+'_concat_left')([tensors[0], models[0].get_layer(concat_with + f'_1' if concat_with == 'input' else concat_with).get_output_at(0)])
+            concat_right = Concatenate(name=name+'_concat_right')([tensors[1], models[1].get_layer(concat_with + f'_2' if concat_with == 'input' else concat_with).get_output_at(0)])
+            tensors = [concat_left, concat_right]
+
+            layer = Conv2D(filters=filters, kernel_size=3, strides=1, padding='same', name=name+'_convA')
+            tensors = list(map(lambda x: layer(x), tensors))
+            layer = LeakyReLU(alpha=0.2)
+            tensors = list(map(lambda x: layer(x), tensors))
+            layer = Conv2D(filters=filters, kernel_size=3, strides=1, padding='same', name=name+'_convB')
+            tensors = list(map(lambda x: layer(x), tensors))
+            layer = LeakyReLU(alpha=0.2)
+            tensors = list(map(lambda x: layer(x), tensors))
+            return tensors
+
+        # Starting point for decoder
+        model_output_shape = models[0].layers[-1].get_output_at(0).shape
+
+        # Starting number of decoder filters
+        if is_halffeatures:
+            decode_filters = int(model_output_shape[-1]) // 2
+        else:
+            decode_filters = int(model_output_shape[-1]) 
+
+         # Decoder Layers
+        layer = Conv2D(filters=decode_filters, kernel_size=1, padding='same', input_shape=model_output_shape, name='conv2')
+        decoders = list(map(lambda x: layer(x), list(map(lambda m: m.output , models))))
+        decoders = upproject(decoders, int(decode_filters/2), 'up1', concat_with='pool3_pool')
+        decoders = upproject(decoders, int(decode_filters/4), 'up2', concat_with='pool2_pool')
+        decoders = upproject(decoders, int(decode_filters/8), 'up3', concat_with='pool1')
+        decoders = upproject(decoders, int(decode_filters/16), 'up4', concat_with='conv1/relu')
+        if True: decoders = upproject(decoders, int(decode_filters/32), 'up5', concat_with='input')
+
+        # Extract depths (final layer)
+        left_disp = Conv2D(filters=1, kernel_size=3, strides=1, padding='same', name='disp_left')(decoders[0])
+        right_disp = Conv2D(filters=1, kernel_size=3, strides=1, padding='same', name='disp_right')(decoders[1])
+        right_disp = Lambda(lambda x: tf.reverse(x, axis=[2]), name='reverse_disp_right')(right_disp)  # 2 because of batch
+
+        left_reconstruction = Lambda(lambda x: generate_image_left(right_img, x), name='recon_left')(left_disp)
+        right_reconstruction = Lambda(lambda x: generate_image_right(left_img, x), name='recon_right')(right_disp)
+        
+        disparities = Lambda(lambda xs: tf.stack(xs, axis=1), name='stack_disp')([left_disp, right_disp])
+        reconstructions = Lambda(lambda xs: tf.stack(xs, axis=1), name='stack_recon')([left_reconstruction, right_reconstruction])
+
+        return disparities, reconstructions
+
+def create_model(existing='', encoder='dense169'):
         
     if len(existing) == 0:
         print('Loading base model (DenseNet)..')
@@ -33,43 +89,10 @@ def create_model(existing='', encoder='dense169', is_halffeatures=True, nr_input
 
         print('Base model loaded.')
 
-        left_input_tensor = left_model.input
-        right_input_tensor = right_model.input
-
-        # Starting point for decoder
-        left_model_output_shape = left_model.layers[-1].get_output_at(0).shape
-
-        # Starting number of decoder filters
-        if is_halffeatures:
-            decode_filters = int(left_model_output_shape[-1]) // 2
-        else:
-            decode_filters = int(left_model_output_shape[-1]) 
-
-        # Define upsampling layer
-        def upproject(tensor, filters, name, concat_with):
-            up_i = BilinearUpSampling2D((2, 2), name=name+'_upsampling2d')(tensor)
-            up_i = Concatenate(name=name+'_concat')([up_i, left_model.get_layer(concat_with).get_output_at(0)]) # Skip connection
-            up_i = Conv2D(filters=filters, kernel_size=3, strides=1, padding='same', name=name+'_convA')(up_i)
-            up_i = LeakyReLU(alpha=0.2)(up_i)
-            up_i = Conv2D(filters=filters, kernel_size=3, strides=1, padding='same', name=name+'_convB')(up_i)
-            up_i = LeakyReLU(alpha=0.2)(up_i)
-            return up_i
-
-        # Decoder Layers
-        decoder = Conv2D(filters=decode_filters, kernel_size=1, padding='same', input_shape=left_model_output_shape, name='conv2')(left_model.output)
-
-        decoder = upproject(decoder, int(decode_filters/2), 'up1', concat_with='pool3_pool')
-        decoder = upproject(decoder, int(decode_filters/4), 'up2', concat_with='pool2_pool')
-        decoder = upproject(decoder, int(decode_filters/8), 'up3', concat_with='pool1')
-        decoder = upproject(decoder, int(decode_filters/16), 'up4', concat_with='conv1/relu')
-        if True: decoder = upproject(decoder, int(decode_filters/32), 'up5', concat_with='input_1')
-
-        # Extract depths (final layer)
-        disp_left = Conv2D(filters=1, kernel_size=3, strides=1, padding='same', name='disp_left')(decoder)
-        left_reconstruction = Lambda(lambda x: generate_image_left(right_input_tensor, x))(disp_left)
+        disparities, reconstructions = get_decoders([left_model, right_model])
 
         # Create the model
-        model = Model(inputs=[left_model.input, right_model.input], outputs=[disp_left, left_reconstruction])
+        model = Model(inputs=[left_model.input, right_model.input], outputs=[disparities, reconstructions])
     else:
         # Load model from file
         if not existing.endswith('.h5'):
@@ -82,7 +105,8 @@ def create_model(existing='', encoder='dense169', is_halffeatures=True, nr_input
     
     return model
 
-
+# modified from
+# https://stackoverflow.com/questions/49492255/how-to-replace-or-insert-intermediate-layer-in-keras-model
 def add_input(model):
 
     _input = Input(shape=(None,None,3))
@@ -105,6 +129,8 @@ def add_input(model):
     network_dict['new_output_tensor_of'].update(
             {model.layers[0].name: _input})
 
+    x = _input
+
     # Iterate over all layers after the input
     for layer in model.layers[1:]:
 
@@ -114,7 +140,16 @@ def add_input(model):
         if len(layer_input) == 1:
             layer_input = layer_input[0]
 
-        x = layer(layer_input)
+        if layer.name == 'zero_padding2d_1':
+            new_layer = Lambda(lambda x : tf.reverse(x, [2]), name='reverse_input_right')
+            new_layer.name = '{}_{}'.format(layer.name, 
+                                                new_layer.name)
+            x = new_layer(x)
+            print('Layer {} inserted after layer {}'.format(new_layer.name,
+                                                            layer.name))
+            x = layer(x)
+        else: 
+            x = layer(layer_input)
 
         # Set new output tensor (the original one, or the one of the inserted
         # layer)

@@ -17,13 +17,21 @@ def ssim(y_true, y_pred):
 # =============================================================================================
 
 def depth_loss_function(y_true, y_pred):
-    return ssim(y_true, y_pred) + edges(y_true, y_pred) + 0.1 * point_wise_depth(y_true, y_pred)
+    print('================================')
+    print(y_true)
+    print(y_pred)
+    left_y_true = y_true
+    left_y_pred, right_y_pred = tf.unstack(y_pred, axis=1)
+    print(left_y_pred.shape)
+    print('true',left_y_true.shape)
+    return ssim(left_y_true, left_y_pred) + edges(left_y_true, left_y_pred) + 0.1 * point_wise_depth(left_y_true, left_y_pred)
 
 def reconstruction_loss_function(y_true, y_pred):
     left_y_true = y_true[:,0]
     right_y_true = y_true[:,1]
+    print('recon',left_y_true.shape)
 
-    left_y_pred = y_pred
+    left_y_pred, right_y_pred = tf.unstack(y_pred, axis=1)
     # right_y_pred = y_pred[1]
 
     l1_weight = 0.85
