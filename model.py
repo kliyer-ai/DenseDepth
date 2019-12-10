@@ -5,14 +5,8 @@ from keras.models import Model, load_model, Sequential
 from keras.layers import Input, InputLayer, Conv2D, Activation, LeakyReLU, Concatenate, Lambda
 from layers import BilinearUpSampling2D
 from loss import depth_loss_function
-from bilinear_sampler import bilinear_sampler_1d_h
+from bilinear_sampler import generate_image_left, generate_image_right
 import tensorflow as tf
-
-def generate_image_left(img, disp):
-    return bilinear_sampler_1d_h(img, -disp)
-
-def generate_image_right(img, disp):
-    return bilinear_sampler_1d_h(img, disp)
 
 def get_decoders(models, is_halffeatures=True):
         left_img = models[0].input

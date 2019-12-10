@@ -82,7 +82,7 @@ print('\n\n\n', 'Compiling model..', runID, '\n\n\tGPU ' + (str(args.gpus)+' gpu
 
 metrics = []
 # metrics = [abs_rel, rmse, point_wise_depth, edges, ssim]
-model.compile(loss=[depth_loss_function, reconstruction_loss_function], loss_weights=[0.0, 1.0], optimizer=optimizer, metrics=metrics)
+model.compile(loss=[depth_loss_function, reconstruction_loss_function], loss_weights=[1.0, 1.0], optimizer=optimizer, metrics=metrics)
 
 print('Ready for training!\n') 
 

@@ -102,3 +102,9 @@ def bilinear_sampler_1d_h(input_images, x_offset, wrap_mode='border', name='bili
         # added clip 
         output = _transform(input_images, x_offset)
         return output
+
+def generate_image_left(img, disp):
+    return bilinear_sampler_1d_h(img, -disp)
+
+def generate_image_right(img, disp):
+    return bilinear_sampler_1d_h(img, disp)
