@@ -73,15 +73,18 @@ class BasicRGBSequence(Sequence):
             right_image = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[1]]) )).reshape(get_shape_rgb())/255,0,1)
             right_image = resize(right_image, get_shape_rgb()[1])
 
-            disparity = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[-2]]) )).reshape(get_shape_depth(halved=disp_is_halved))/255,0,1)
-            disparity = resize(disparity, get_shape_depth(halved=disp_is_halved)[1])
+            left_disparity = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[2]]) )).reshape(get_shape_depth(halved=disp_is_halved))/255,0,1)
+            left_disparity = resize(left_disparity, get_shape_depth(halved=disp_is_halved)[1])
+            right_disparity = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[3]]) )).reshape(get_shape_depth(halved=disp_is_halved))/255,0,1)
+            right_disparity = resize(right_disparity, get_shape_depth(halved=disp_is_halved)[1])
 
             if self.train and is_apply_policy: xs, y = self.policy(xs, y)
 
             batch_x[0][i] = left_image
             batch_x[1][i] = right_image
             
-            batch_y[0][i,0] = disparity
+            batch_y[0][i,0] = left_disparity
+            batch_y[0][i,1] = right_disparity
             batch_y[1][i,0] = left_image.copy()
             batch_y[1][i,1] = right_image.copy()
 

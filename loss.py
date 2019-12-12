@@ -10,39 +10,33 @@ def edges(y_true, y_pred):
                      K.abs(dx_pred - dx_true), axis=-1)
     return K.mean(l_edges)
 
-
 def point_wise_depth(y_true, y_pred):
     l_depth = K.mean(K.abs(y_pred - y_true), axis=-1)
     return K.mean(l_depth)
 
-
 def ssim(y_true, y_pred):
     return K.clip((1 - tf.image.ssim(y_true, y_pred, 1.0)) * 0.5, 0, 1)
 
-
-# LSIM
-def gradient_x(img):
-    gx = img[:,:,:-1,:] - img[:,:,1:,:]
-    return gx
-
-def gradient_y(img):
-    gy = img[:,:-1,:,:] - img[:,1:,:,:]
-    return gy
-
 def get_total_var(disp):
-    disp_gradients_x = gradient_x(disp)
-    disp_gradients_y = gradient_y(disp)
+    disp_gradients_y, disp_gradients_x = tf.image.image_gradients(disp)
     total_var = disp_gradients_x + disp_gradients_y
     return total_var
 
 # =============================================================================================
 
+def supervised_depth_loss_function(y_true, y_pred):
+    return ssim(y_true, y_pred) + edges(y_true, y_pred) + 0.1 * point_wise_depth(y_true, y_pred)
 
 def depth_loss_function(y_true, y_pred):
-    # left_disp = y_true[:, 0]
-    # right_disp = y_true[:, 1]
-    # left_disp, right_disp = tf.unstack(y_true, axis=1)
+    left_disp = y_true[:, 0]
+    right_disp = y_true[:, 1]
+    left_mask = tf.math.equal(left_disp, 0.0)
+    right_mask = tf.math.equal(right_disp, 0.0)
+
     left_disp_est, right_disp_est = tf.unstack(y_pred, axis=1)
+    # only keeps the estimated disparity for the masked regions, i.e. the wires
+    masked_left_disp_est = tf.where(left_mask, tf.zeros(tf.shape(left_disp)), left_disp_est)
+    masked_right_disp_est = tf.where(right_mask, tf.zeros(tf.shape(right_disp)), right_disp_est)
     
     # LR CONSISTENCY
     right_to_left_disp = generate_image_left(right_disp_est, left_disp_est)
@@ -53,13 +47,17 @@ def depth_loss_function(y_true, y_pred):
     total_lr_loss = lr_left_loss + lr_right_loss
 
     # DISPARITY SMOOTHNESS
+    # Acts as regularization term
     disp_left_loss  = tf.reduce_mean(tf.abs( get_total_var(left_disp_est) )) 
     disp_right_loss = tf.reduce_mean(tf.abs( get_total_var(right_disp_est) ))
     disp_gradient_loss = disp_left_loss + disp_right_loss
 
-    # ssim(left_disp, left_y_pred) + edges(left_disp, left_y_pred) + 0.1 * point_wise_depth(left_disp, left_y_pred)
+    # SUPERVISED loss
+    sup_left_loss = supervised_depth_loss_function(left_disp, masked_left_disp_est) 
+    sup_right_loss = supervised_depth_loss_function(right_disp, masked_right_disp_est) 
+    total_sup_loss = sup_left_loss + sup_right_loss
 
-    return 1.0 * total_lr_loss + 0.1 * disp_gradient_loss
+    return 1.0 * total_lr_loss + 0.1 * disp_gradient_loss + 1.0 * total_sup_loss
 
 # image reconstruction
 # l1 and ssim
@@ -79,4 +77,5 @@ def reconstruction_loss_function(y_true, y_pred):
     total_ssim = left_ssim + right_ssim
 
     l1_weight = 0.85
-    return l1_weight * total_l1 + (1 - l1_weight) * total_ssim
+    image_loss = l1_weight * total_l1 + (1 - l1_weight) * total_ssim
+    return image_loss
