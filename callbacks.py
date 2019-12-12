@@ -45,37 +45,45 @@ def get_callbacks(model, basemodel, train_generator, test_generator, runPath):
                 xs_train, y_train = train_generator.__getitem__(self.train_idx[i], False)
                 xs_test, y_test = test_generator[self.test_idx[i]]
 
+        	    # get first batch
                 xs_train = list(map(lambda x: x[0], xs_train))
                 xs_test = list(map(lambda x: x[0], xs_test))
+                y_train = list(map(lambda x: x[0], y_train))
+                y_test = list(map(lambda x: x[0], y_test))
 
-                disp_train, _ = list(map(lambda x: x[0], y_train))
-                disp_test, _  = list(map(lambda x: x[0], y_test))
+                # onlt get disps, second arg is images again
+                disps_train, _ = y_train
+                disps_test, _  = y_test
 
-                h, w = disp_train.shape[0], disp_train.shape[1]
+                h, w = disps_train[0].shape[0], disps_train[0].shape[1]
 
                 rgb_train = list(map(lambda x: resize(x, (h,w), preserve_range=True, mode='reflect', anti_aliasing=True), xs_train))
                 rgb_test = list(map(lambda x: resize(x, (h,w), preserve_range=True, mode='reflect', anti_aliasing=True), xs_test))
 
-                gt_train = plasma(disp_train[:,:,0])[:,:,:3]
-                gt_test = plasma(disp_test[:,:,0])[:,:,:3]
+                gt_train = list(map(lambda x: plasma(x[:,:,0])[:,:,:3], disps_train)) 
+                gt_test = list(map(lambda x: plasma(x[:,:,0])[:,:,:3], disps_test))
+                
+                # for now because only one disp is known
+                gt_train = gt_train[0]
+                gt_test = gt_test[0]
 
-                disp_pred_train, reconstruction_train = predict(model, xs_train)
-                reconstruction_train = reconstruction_train[0,:,:,:]
-                predict_train = plasma(disp_pred_train[0,:,:,0])[:,:,:3]
+                disps_pred_train, reconstructions_train = predict(model, xs_train)
+                reconstructions_train = list(reconstructions_train[0])
+                predict_trains = list(map(lambda x: plasma(x[:,:,0])[:,:,:3], disps_pred_train[0])) 
 
-                disp_pred_test, reconstruction_test = predict(model, xs_test)
-                reconstruction_test = reconstruction_test[0,:,:,:]
-                predict_test = plasma(disp_pred_test[0,:,:,0])[:,:,:3]
-
-                train_samples.append(np.vstack(rgb_train + [gt_train, predict_train, reconstruction_train]))
-                test_samples.append(np.vstack(rgb_test + [gt_test, predict_test, reconstruction_test]))
+                disps_pred_test, reconstructions_test = predict(model, xs_test)
+                reconstructions_test = list(reconstructions_test[0])
+                predicts_test = list(map(lambda x: plasma(x[:,:,0])[:,:,:3], disps_pred_test[0])) 
+                
+                train_samples.append(np.vstack(rgb_train + [gt_train] + predict_trains + reconstructions_train))
+                test_samples.append(np.vstack(rgb_test + [gt_test] + predicts_test + reconstructions_test))
 
             self.writer.add_summary(tf.Summary(value=[tf.Summary.Value(tag='Train', image=make_image(255 * np.hstack(train_samples)))]), epoch)
             self.writer.add_summary(tf.Summary(value=[tf.Summary.Value(tag='Test', image=make_image(255 * np.hstack(test_samples)))]), epoch)
 
             # Metrics
             # e = evaluate(model, test_set['rgb'], test_set['depth'], test_set['crop'], batch_size=6, verbose=True)
-            e = compute_errors(np.stack(disp_test, axis=0), np.stack(disp_pred_test, axis=0))
+            e = compute_errors(np.stack(disps_test[0], axis=0), np.stack(disps_pred_test[0], axis=0))
             logs.update({'rel': e[3]})
             logs.update({'rms': e[4]})
             logs.update({'log10': e[5]})
