@@ -14,6 +14,7 @@ import numpy as np
 from PIL import Image
 from skimage.transform import resize
 from shape import get_shape_depth
+from custom_objects import custom_objects
 
 def print_info(img):
     print('min', img.min())
@@ -26,13 +27,9 @@ parser.add_argument('--model', default='nyu.h5', type=str, help='Trained Keras m
 parser.add_argument('--input', default='examples/*.png', type=str, help='Input filename or folder.')
 args = parser.parse_args()
 
-# Custom object needed for inference and training
-custom_objects = {'BilinearUpSampling2D': BilinearUpSampling2D, 'depth_loss_function': None}
-
 print('Loading model...')
 
 # Load model into GPU / CPU
-# model = load_model(args.model, custom_objects=custom_objects, compile=False)
 with open(args.model+'.yaml', 'r') as f:
     yaml_string = f.read()
     model = model_from_yaml(yaml_string, custom_objects=custom_objects)

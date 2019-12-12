@@ -10,14 +10,12 @@ from layers import BilinearUpSampling2D
 from loss import disparity_loss_function
 from utils import predict, load_images, display_images, evaluate
 from matplotlib import pyplot as plt
+from custom_objects import custom_objects
 
 # Argument Parser
 parser = argparse.ArgumentParser(description='High Quality Monocular Depth Estimation via Transfer Learning')
 parser.add_argument('--model', default='nyu.h5', type=str, help='Trained Keras model file.')
 args = parser.parse_args()
-
-# Custom object needed for inference and training
-custom_objects = {'BilinearUpSampling2D': BilinearUpSampling2D, 'depth_loss_function': disparity_loss_function}
 
 # Load model into GPU / CPU
 print('Loading model...')
