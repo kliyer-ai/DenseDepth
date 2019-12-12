@@ -7,7 +7,7 @@ import argparse
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '5'
 from keras.models import load_model
 from layers import BilinearUpSampling2D
-from loss import depth_loss_function
+from loss import disparity_loss_function
 from utils import predict, load_images, display_images, evaluate
 from matplotlib import pyplot as plt
 
@@ -17,7 +17,7 @@ parser.add_argument('--model', default='nyu.h5', type=str, help='Trained Keras m
 args = parser.parse_args()
 
 # Custom object needed for inference and training
-custom_objects = {'BilinearUpSampling2D': BilinearUpSampling2D, 'depth_loss_function': depth_loss_function}
+custom_objects = {'BilinearUpSampling2D': BilinearUpSampling2D, 'depth_loss_function': disparity_loss_function}
 
 # Load model into GPU / CPU
 print('Loading model...')

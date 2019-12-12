@@ -4,7 +4,7 @@ from keras import applications
 from keras.models import Model, load_model, Sequential
 from keras.layers import Input, InputLayer, Conv2D, Activation, LeakyReLU, Concatenate, Lambda
 from layers import BilinearUpSampling2D
-from loss import depth_loss_function
+from loss import disparity_loss_function
 from bilinear_sampler import generate_image_left, generate_image_right
 import tensorflow as tf
 
@@ -101,7 +101,7 @@ def create_model(existing='', encoder='dense169'):
         # Load model from file
         if not existing.endswith('.h5'):
             sys.exit('Please provide a correct model file when using [existing] argument.')
-        custom_objects = {'BilinearUpSampling2D': BilinearUpSampling2D, 'depth_loss_function': depth_loss_function}
+        custom_objects = {'BilinearUpSampling2D': BilinearUpSampling2D, 'depth_loss_function': disparity_loss_function}
         model = load_model(existing, custom_objects=custom_objects)
         print('\nExisting model loaded.\n')
 

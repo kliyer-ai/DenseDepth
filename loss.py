@@ -24,10 +24,10 @@ def get_total_var(disp):
 
 # =============================================================================================
 
-def supervised_depth_loss_function(y_true, y_pred):
+def supervised_loss_function(y_true, y_pred):
     return ssim(y_true, y_pred) + edges(y_true, y_pred) + 0.1 * point_wise_depth(y_true, y_pred)
 
-def depth_loss_function(y_true, y_pred):
+def disparity_loss_function(y_true, y_pred):
     left_disp = y_true[:, 0]
     right_disp = y_true[:, 1]
     left_mask = tf.math.equal(left_disp, 0.0)
@@ -53,8 +53,8 @@ def depth_loss_function(y_true, y_pred):
     disp_gradient_loss = disp_left_loss + disp_right_loss
 
     # SUPERVISED loss
-    sup_left_loss = supervised_depth_loss_function(left_disp, masked_left_disp_est) 
-    sup_right_loss = supervised_depth_loss_function(right_disp, masked_right_disp_est) 
+    sup_left_loss = supervised_loss_function(left_disp, masked_left_disp_est) 
+    sup_right_loss = supervised_loss_function(right_disp, masked_right_disp_est) 
     total_sup_loss = sup_left_loss + sup_right_loss
 
     return 1.0 * total_lr_loss + 0.1 * disp_gradient_loss + 1.0 * total_sup_loss
