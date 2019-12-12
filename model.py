@@ -89,7 +89,7 @@ def create_model(existing='', encoder='dense169'):
         # Layer freezing?
         for layer in left_model.layers: layer.trainable = True
 
-        right_model = add_input(left_model)
+        right_model = add_right_input(left_model)
 
         print('Base model loaded.')
 
@@ -111,7 +111,7 @@ def create_model(existing='', encoder='dense169'):
 
 # modified from
 # https://stackoverflow.com/questions/49492255/how-to-replace-or-insert-intermediate-layer-in-keras-model
-def add_input(model):
+def add_right_input(model):
 
     _input = Input(shape=(None,None,3))
 
