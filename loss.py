@@ -29,7 +29,7 @@ def gradient_y(img):
     gy = img[:,:-1,:,:] - img[:,1:,:,:]
     return gy
 
-def get_total_var(disp, pyramid):
+def get_total_var(disp):
     disp_gradients_x = gradient_x(disp)
     disp_gradients_y = gradient_y(disp)
     total_var = disp_gradients_x + disp_gradients_y
@@ -39,8 +39,8 @@ def get_total_var(disp, pyramid):
 
 
 def depth_loss_function(y_true, y_pred):
-    left_disp = y_true[:, 0]
-    right_disp = y_true[:, 1]
+    # left_disp = y_true[:, 0]
+    # right_disp = y_true[:, 1]
     # left_disp, right_disp = tf.unstack(y_true, axis=1)
     left_disp_est, right_disp_est = tf.unstack(y_pred, axis=1)
     
@@ -53,27 +53,27 @@ def depth_loss_function(y_true, y_pred):
     total_lr_loss = lr_left_loss + lr_right_loss
 
     # DISPARITY SMOOTHNESS
-    # missing images
-    # disp_left_loss  = tf.reduce_mean(tf.abs( get_total_var() )) 
-    # disp_right_loss = tf.reduce_mean(tf.abs( get_total_var() ))
-    # disp_gradient_loss = disp_left_loss + disp_right_loss
+    disp_left_loss  = tf.reduce_mean(tf.abs( get_total_var(left_disp_est) )) 
+    disp_right_loss = tf.reduce_mean(tf.abs( get_total_var(right_disp_est) ))
+    disp_gradient_loss = disp_left_loss + disp_right_loss
 
     # ssim(left_disp, left_y_pred) + edges(left_disp, left_y_pred) + 0.1 * point_wise_depth(left_disp, left_y_pred)
 
-    return total_lr_loss
+    return 1.0 * total_lr_loss + 0.1 * disp_gradient_loss
 
 # image reconstruction
 # l1 and ssim
 def reconstruction_loss_function(y_true, y_pred):
     left_image = y_true[:, 0]
     right_image = y_true[:, 1]
-    # left_image, right_image = tf.unstack(y_true, axis=1)
     left_recon, right_recon = tf.unstack(y_pred, axis=1)
 
+    # L1
     left_l1 = point_wise_depth(left_image, left_recon)
     right_l1 = point_wise_depth(right_image, right_recon)
     total_l1 = left_l1 + right_l1
 
+    # SSIM
     left_ssim = ssim(left_image, left_recon)
     right_ssim = ssim(right_image, right_recon)
     total_ssim = left_ssim + right_ssim
