@@ -4,7 +4,7 @@ from datetime import datetime
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '5'
 
 # Kerasa / TensorFlow
-from loss import depth_loss_function, reconstruction_loss_function
+from loss import disparity_loss_function, reconstruction_loss_function
 from utils import predict, save_images, load_test_data
 from model import create_model
 from data import get_train_test_data
@@ -82,7 +82,7 @@ print('\n\n\n', 'Compiling model..', runID, '\n\n\tGPU ' + (str(args.gpus)+' gpu
 
 metrics = []
 # metrics = [abs_rel, rmse, point_wise_depth, edges, ssim]
-model.compile(loss=[depth_loss_function, reconstruction_loss_function], loss_weights=[1.0, 1.0], optimizer=optimizer, metrics=metrics)
+model.compile(loss=[disparity_loss_function, reconstruction_loss_function], loss_weights=[1.0, 1.0], optimizer=optimizer, metrics=metrics)
 
 print('Ready for training!\n') 
 

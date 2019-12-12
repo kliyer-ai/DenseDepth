@@ -65,8 +65,8 @@ def get_decoders(models, is_halffeatures=True):
         right_disp = Conv2D(filters=1, kernel_size=3, strides=1, padding='same', name='disp_right')(decoders[1])
         right_disp = Lambda(lambda x: tf.reverse(x, axis=[2]), name='reverse_disp_right')(right_disp)  # 2 because of batch
 
-        left_reconstruction = Lambda(lambda x: generate_image_left(right_img, x), name='recon_left')(left_disp)
-        right_reconstruction = Lambda(lambda x: generate_image_right(left_img, x), name='recon_right')(right_disp)
+        left_reconstruction = Lambda(lambda x: generate_image_left(x[0], x[1]), name='recon_left')([right_img, left_disp])
+        right_reconstruction = Lambda(lambda x: generate_image_right(x[0], x[1]), name='recon_right')([left_img, right_disp])
         
         disparities = Lambda(lambda xs: tf.stack(xs, axis=1), name='stack_disp')([left_disp, right_disp])
         reconstructions = Lambda(lambda xs: tf.stack(xs, axis=1), name='stack_recon')([left_reconstruction, right_reconstruction])
