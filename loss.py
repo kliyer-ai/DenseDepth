@@ -48,6 +48,7 @@ def disparity_loss_function(y_true, y_pred):
 
     # DISPARITY SMOOTHNESS
     # Acts as regularization term
+    # should ages be emphasized??
     disp_left_loss  = tf.reduce_mean(tf.abs( get_disparity_smoothness(left_disp_est) )) 
     disp_right_loss = tf.reduce_mean(tf.abs( get_disparity_smoothness(right_disp_est) ))
     disp_gradient_loss = disp_left_loss + disp_right_loss
@@ -61,29 +62,31 @@ def disparity_loss_function(y_true, y_pred):
 
 # image reconstruction
 # l1 and ssim
-def reconstruction_loss_function(y_true, y_pred):
+def reconstruction_loss_function(y_true, y_pred, crop=True):
     left_image = y_true[:, 0]
     right_image = y_true[:, 1]
     left_recon, right_recon = tf.unstack(y_pred, axis=1)
 
     # CROP
-    height, width, channels = get_shape_rgb()
-    crop_width = int(0.7 * width)
-    left_image_c = tf.image.resize_image_with_crop_or_pad(left_image, height, crop_width)
-    right_image_c = tf.image.resize_image_with_crop_or_pad(right_image, height, crop_width)
-    left_recon_c = tf.image.resize_image_with_crop_or_pad(left_recon, height, crop_width)
-    right_recon_c = tf.image.resize_image_with_crop_or_pad(right_recon, height, crop_width)
+    if crop:
+        height, width, channels = get_shape_rgb()
+        crop_width = int(0.7 * width)
+        print('cropped image width is', crop_width)
+        left_image = tf.image.resize_image_with_crop_or_pad(left_image, height, crop_width)
+        right_image = tf.image.resize_image_with_crop_or_pad(right_image, height, crop_width)
+        left_recon = tf.image.resize_image_with_crop_or_pad(left_recon, height, crop_width)
+        right_recon = tf.image.resize_image_with_crop_or_pad(right_recon, height, crop_width)
 
     # L1
-    left_l1 = point_wise_depth(left_image_c, left_recon_c)
-    right_l1 = point_wise_depth(right_image_c, right_recon_c)
+    left_l1 = point_wise_depth(left_image, left_recon)
+    right_l1 = point_wise_depth(right_image, right_recon)
     total_l1 = left_l1 + right_l1
 
     # SSIM
-    left_ssim = ssim(left_image_c, left_recon_c)
-    right_ssim = ssim(right_image_c, right_recon_c)
+    left_ssim = ssim(left_image, left_recon)
+    right_ssim = ssim(right_image, right_recon)
     total_ssim = left_ssim + right_ssim
 
-    l1_weight = 0.85
-    image_loss = l1_weight * total_l1 + (1 - l1_weight) * total_ssim
+    ssim_weight = 0.85
+    image_loss = ssim_weight * total_ssim + (1 - ssim_weight) * total_l1
     return image_loss
