@@ -22,25 +22,36 @@ def get_disparity_smoothness(disp):
     total_var = disp_gradients_x + disp_gradients_y
     return total_var
 
+def crop_left(img, crop_factor):
+    batch_size, height, width, _ = get_shape_rgb(batch_size=True)
+    crop_width = int(crop_factor * width)
+    return tf.image.crop_to_bounding_box(img, 0, width - crop_width, height, crop_width)
+
+def crop_right(img, crop_factor):
+    batch_size, height, width, _ = get_shape_rgb(batch_size=True)
+    crop_width = int(crop_factor * width)
+    return tf.image.crop_to_bounding_box(img, 0, 0, height, crop_width)
+
 # =============================================================================================
 
 def supervised_loss_function(y_true, y_pred):
     return ssim(y_true, y_pred) + edges(y_true, y_pred) + 0.1 * point_wise_depth(y_true, y_pred)
 
-def disparity_loss_function(y_true, y_pred):
+def disparity_loss_function(y_true, y_pred, crop_factor=0.8):
     left_disp = y_true[:, 0]
     right_disp = y_true[:, 1]
-    left_mask = tf.math.equal(left_disp, 0.0)
-    right_mask = tf.math.equal(right_disp, 0.0)
-
     left_disp_est, right_disp_est = tf.unstack(y_pred, axis=1)
-    # only keeps the estimated disparity for the masked regions, i.e. the wires
-    masked_left_disp_est = tf.where(left_mask, tf.zeros(tf.shape(left_disp)), left_disp_est)
-    masked_right_disp_est = tf.where(right_mask, tf.zeros(tf.shape(right_disp)), right_disp_est)
     
     # LR CONSISTENCY
     right_to_left_disp = generate_image_left(right_disp_est, left_disp_est)
     left_to_right_disp = generate_image_right(left_disp_est, right_disp_est)
+
+    # OPTIONAL CROP
+    if crop_factor > 0.0:
+        left_disp_est = crop_left(left_disp_est, crop_factor)
+        right_disp_est = crop_right(right_disp_est, crop_factor)
+        right_to_left_disp = crop_left(right_to_left_disp, crop_factor)
+        left_to_right_disp = crop_right(left_to_right_disp, crop_factor)
 
     lr_left_loss = tf.reduce_mean(tf.abs(right_to_left_disp - left_disp_est))
     lr_right_loss = tf.reduce_mean(tf.abs(left_to_right_disp - right_disp_est))
@@ -48,12 +59,17 @@ def disparity_loss_function(y_true, y_pred):
 
     # DISPARITY SMOOTHNESS
     # Acts as regularization term
-    # should ages be emphasized??
+    # should edges be emphasized??
     disp_left_loss  = tf.reduce_mean(tf.abs( get_disparity_smoothness(left_disp_est) )) 
     disp_right_loss = tf.reduce_mean(tf.abs( get_disparity_smoothness(right_disp_est) ))
     disp_gradient_loss = disp_left_loss + disp_right_loss
 
-    # SUPERVISED loss
+    # SUPERVISED LOSS
+    left_mask = tf.math.equal(left_disp, 0.0)
+    right_mask = tf.math.equal(right_disp, 0.0)
+    # only keeps the estimated disparity for the masked regions, i.e. the wires
+    masked_left_disp_est = tf.where(left_mask, tf.zeros(tf.shape(left_disp)), left_disp_est)
+    masked_right_disp_est = tf.where(right_mask, tf.zeros(tf.shape(right_disp)), right_disp_est)
     sup_left_loss = supervised_loss_function(left_disp, masked_left_disp_est) 
     sup_right_loss = supervised_loss_function(right_disp, masked_right_disp_est) 
     total_sup_loss = sup_left_loss + sup_right_loss
@@ -62,20 +78,17 @@ def disparity_loss_function(y_true, y_pred):
 
 # image reconstruction
 # l1 and ssim
-def reconstruction_loss_function(y_true, y_pred, crop=True):
+def reconstruction_loss_function(y_true, y_pred, crop_factor=0.8):
     left_image = y_true[:, 0]
     right_image = y_true[:, 1]
     left_recon, right_recon = tf.unstack(y_pred, axis=1)
 
-    # CROP
-    if crop:
-        height, width, channels = get_shape_rgb()
-        crop_width = int(0.7 * width)
-        print('cropped image width is', crop_width)
-        left_image = tf.image.resize_image_with_crop_or_pad(left_image, height, crop_width)
-        right_image = tf.image.resize_image_with_crop_or_pad(right_image, height, crop_width)
-        left_recon = tf.image.resize_image_with_crop_or_pad(left_recon, height, crop_width)
-        right_recon = tf.image.resize_image_with_crop_or_pad(right_recon, height, crop_width)
+    # OPTIONAL CROP
+    if crop_factor > 0.0:
+        left_image = crop_left(left_image, crop_factor)
+        right_image = crop_right(right_image, crop_factor)
+        left_recon = crop_left(left_recon, crop_factor)
+        right_recon = crop_right(right_recon, crop_factor)
 
     # L1
     left_l1 = point_wise_depth(left_image, left_recon)
