@@ -68,7 +68,7 @@ def reconstruction_loss_function(y_true, y_pred):
 
     # CROP
     height, width, channels = get_shape_rgb()
-    crop_width = 0.7 * width
+    crop_width = int(0.7 * width)
     left_image_c = tf.image.resize_image_with_crop_or_pad(left_image, height, crop_width)
     right_image_c = tf.image.resize_image_with_crop_or_pad(right_image, height, crop_width)
     left_recon_c = tf.image.resize_image_with_crop_or_pad(left_recon, height, crop_width)
