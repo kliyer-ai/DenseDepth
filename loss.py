@@ -35,7 +35,8 @@ def crop_right(img, crop_factor):
 # =============================================================================================
 
 def supervised_loss_function(y_true, y_pred):
-    return ssim(y_true, y_pred) + edges(y_true, y_pred) + 0.1 * point_wise_depth(y_true, y_pred)
+    l1_factor = 1.0
+    return ssim(y_true, y_pred) + edges(y_true, y_pred) + l1_factor * point_wise_depth(y_true, y_pred)
 
 def disparity_loss_function(y_true, y_pred, crop_factor=0.8):
     left_disp = y_true[:, 0]
