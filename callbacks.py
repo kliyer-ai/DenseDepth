@@ -63,10 +63,6 @@ def get_callbacks(model, basemodel, train_generator, test_generator, runPath):
                 gt_train = list(map(lambda x: plasma(x[:,:,0])[:,:,:3], disps_train)) 
                 gt_test = list(map(lambda x: plasma(x[:,:,0])[:,:,:3], disps_test))
                 
-                # for now because only one disp is known
-                gt_train = gt_train[0]
-                gt_test = gt_test[0]
-
                 disps_pred_train, reconstructions_train = predict(model, xs_train)
                 reconstructions_train = list(reconstructions_train[0])
                 predict_trains = list(map(lambda x: plasma(x[:,:,0])[:,:,:3], disps_pred_train[0])) 
@@ -75,8 +71,8 @@ def get_callbacks(model, basemodel, train_generator, test_generator, runPath):
                 reconstructions_test = list(reconstructions_test[0])
                 predicts_test = list(map(lambda x: plasma(x[:,:,0])[:,:,:3], disps_pred_test[0])) 
                 
-                train_samples.append(np.vstack(rgb_train + [gt_train] + predict_trains + reconstructions_train))
-                test_samples.append(np.vstack(rgb_test + [gt_test] + predicts_test + reconstructions_test))
+                train_samples.append(np.vstack(rgb_train + reconstructions_train + gt_train + predict_trains))
+                test_samples.append(np.vstack(rgb_test + reconstructions_test + gt_test + predicts_test))
 
             self.writer.add_summary(tf.Summary(value=[tf.Summary.Value(tag='Train', image=make_image(255 * np.hstack(train_samples)))]), epoch)
             self.writer.add_summary(tf.Summary(value=[tf.Summary.Value(tag='Test', image=make_image(255 * np.hstack(test_samples)))]), epoch)

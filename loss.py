@@ -2,7 +2,6 @@ import keras.backend as K
 import tensorflow as tf
 from bilinear_sampler import generate_image_left, generate_image_right
 
-
 def edges(y_true, y_pred):
     dy_true, dx_true = tf.image.image_gradients(y_true)
     dy_pred, dx_pred = tf.image.image_gradients(y_pred)
