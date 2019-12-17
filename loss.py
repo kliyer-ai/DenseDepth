@@ -1,6 +1,7 @@
 import keras.backend as K
 import tensorflow as tf
 from bilinear_sampler import generate_image_left, generate_image_right
+from shape import get_shape_rgb
 
 def edges(y_true, y_pred):
     dy_true, dx_true = tf.image.image_gradients(y_true)
@@ -16,7 +17,7 @@ def point_wise_depth(y_true, y_pred):
 def ssim(y_true, y_pred):
     return K.clip((1 - tf.image.ssim(y_true, y_pred, 1.0)) * 0.5, 0, 1)
 
-def get_total_var(disp):
+def get_disparity_smoothness(disp):
     disp_gradients_y, disp_gradients_x = tf.image.image_gradients(disp)
     total_var = disp_gradients_x + disp_gradients_y
     return total_var
@@ -47,8 +48,8 @@ def disparity_loss_function(y_true, y_pred):
 
     # DISPARITY SMOOTHNESS
     # Acts as regularization term
-    disp_left_loss  = tf.reduce_mean(tf.abs( get_total_var(left_disp_est) )) 
-    disp_right_loss = tf.reduce_mean(tf.abs( get_total_var(right_disp_est) ))
+    disp_left_loss  = tf.reduce_mean(tf.abs( get_disparity_smoothness(left_disp_est) )) 
+    disp_right_loss = tf.reduce_mean(tf.abs( get_disparity_smoothness(right_disp_est) ))
     disp_gradient_loss = disp_left_loss + disp_right_loss
 
     # SUPERVISED loss
@@ -65,14 +66,22 @@ def reconstruction_loss_function(y_true, y_pred):
     right_image = y_true[:, 1]
     left_recon, right_recon = tf.unstack(y_pred, axis=1)
 
+    # CROP
+    height, width, channels = get_shape_rgb()
+    crop_width = 0.7 * width
+    left_image_c = tf.image.resize_image_with_crop_or_pad(left_image, height, crop_width)
+    right_image_c = tf.image.resize_image_with_crop_or_pad(right_image, height, crop_width)
+    left_recon_c = tf.image.resize_image_with_crop_or_pad(left_recon, height, crop_width)
+    right_recon_c = tf.image.resize_image_with_crop_or_pad(right_recon, height, crop_width)
+
     # L1
-    left_l1 = point_wise_depth(left_image, left_recon)
-    right_l1 = point_wise_depth(right_image, right_recon)
+    left_l1 = point_wise_depth(left_image_c, left_recon_c)
+    right_l1 = point_wise_depth(right_image_c, right_recon_c)
     total_l1 = left_l1 + right_l1
 
     # SSIM
-    left_ssim = ssim(left_image, left_recon)
-    right_ssim = ssim(right_image, right_recon)
+    left_ssim = ssim(left_image_c, left_recon_c)
+    right_ssim = ssim(right_image_c, right_recon_c)
     total_ssim = left_ssim + right_ssim
 
     l1_weight = 0.85
