@@ -97,4 +97,5 @@ model.fit_generator(train_generator, callbacks=callbacks, validation_data=test_g
 # Save the final trained model:
 with open(runPath+'/model.yaml', 'w') as f:
         f.write(basemodel.to_yaml())
-basemodel.save_weights(runPath + '/model_weights.h5', )
+basemodel.save_weights(runPath + '/model_weights.h5')
+print('MODEL SAVED')
