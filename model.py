@@ -68,8 +68,8 @@ def get_decoders(models, is_halffeatures=True):
         left_reconstruction = Lambda(lambda x: generate_image_left(x[0], x[1]), name='recon_left')([right_img, left_disp])
         right_reconstruction = Lambda(lambda x: generate_image_right(x[0], x[1]), name='recon_right')([left_img, right_disp])
         
-        disparities = Lambda(lambda xs: tf.stack(xs, axis=1), name='stack_disp')([left_disp, right_disp])
-        reconstructions = Lambda(lambda xs: tf.stack(xs, axis=1), name='stack_recon')([left_reconstruction, right_reconstruction])
+        disparities = Lambda(lambda xs: tf.stack(xs, axis=1), name='disparities')([left_disp, right_disp])
+        reconstructions = Lambda(lambda xs: tf.stack(xs, axis=1), name='reconstructions')([left_reconstruction, right_reconstruction])
 
         return disparities, reconstructions
 
