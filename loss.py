@@ -35,7 +35,7 @@ def crop_right(img, crop_factor):
 # =============================================================================================
 
 def supervised_loss_function(y_true, y_pred):
-    l1_factor = 1.0
+    l1_factor = 0.1
     return ssim(y_true, y_pred) + edges(y_true, y_pred) + l1_factor * point_wise_depth(y_true, y_pred)
 
 def disparity_loss_function(y_true, y_pred, crop_factor=0.8):
@@ -49,13 +49,16 @@ def disparity_loss_function(y_true, y_pred, crop_factor=0.8):
 
     # OPTIONAL CROP
     if crop_factor > 0.0:
-        left_disp_est = crop_left(left_disp_est, crop_factor)
-        right_disp_est = crop_right(right_disp_est, crop_factor)
+        left_disp_est_c = crop_left(left_disp_est, crop_factor)
+        right_disp_est_c = crop_right(right_disp_est, crop_factor)
         right_to_left_disp = crop_left(right_to_left_disp, crop_factor)
         left_to_right_disp = crop_right(left_to_right_disp, crop_factor)
+    else:
+        left_disp_est_c = left_disp_est
+        right_disp_est_c = right_disp_est
 
-    lr_left_loss = tf.reduce_mean(tf.abs(right_to_left_disp - left_disp_est))
-    lr_right_loss = tf.reduce_mean(tf.abs(left_to_right_disp - right_disp_est))
+    lr_left_loss = tf.reduce_mean(tf.abs(right_to_left_disp - left_disp_est_c))
+    lr_right_loss = tf.reduce_mean(tf.abs(left_to_right_disp - right_disp_est_c))
     total_lr_loss = lr_left_loss + lr_right_loss
 
     # DISPARITY SMOOTHNESS
@@ -75,7 +78,7 @@ def disparity_loss_function(y_true, y_pred, crop_factor=0.8):
     sup_right_loss = supervised_loss_function(right_disp, masked_right_disp_est) 
     total_sup_loss = sup_left_loss + sup_right_loss
 
-    return 1.0 * total_lr_loss + 0.1 * disp_gradient_loss + 1.0 * total_sup_loss
+    return 1.0 * total_lr_loss + 0.1 * disp_gradient_loss + 2.0 * total_sup_loss
 
 # image reconstruction
 # l1 and ssim
@@ -101,6 +104,6 @@ def reconstruction_loss_function(y_true, y_pred, crop_factor=0.8):
     right_ssim = ssim(right_image, right_recon)
     total_ssim = left_ssim + right_ssim
 
-    ssim_weight = 0.85
+    ssim_weight = 0.9
     image_loss = ssim_weight * total_ssim + (1 - ssim_weight) * total_l1
     return image_loss
