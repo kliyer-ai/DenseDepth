@@ -55,6 +55,7 @@ def display_images(outputs, inputs=None, gt=None, is_colormap=True, is_rescale=T
     
     all_images = []
 
+    # iterate over batches
     for i in range(outputs.shape[0]):
         imgs = []
         
