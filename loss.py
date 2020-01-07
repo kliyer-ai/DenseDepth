@@ -35,10 +35,10 @@ def crop_right(img, crop_factor):
 # =============================================================================================
 
 def supervised_loss_function(y_true, y_pred):
-    l1_factor = 0.1
-    return ssim(y_true, y_pred) + edges(y_true, y_pred) + l1_factor * point_wise_depth(y_true, y_pred)
+    l1_factor = 0.9
+    return (1 - l1_factor) * ssim(y_true, y_pred) + 1 * edges(y_true, y_pred) + l1_factor * point_wise_depth(y_true, y_pred)
 
-def disparity_loss_function(y_true, y_pred, crop_factor=0.8):
+def disparity_loss_function(y_true, y_pred, crop_factor=0.8, mask=False):
     left_disp = y_true[:, 0]
     right_disp = y_true[:, 1]
     left_disp_est, right_disp_est = tf.unstack(y_pred, axis=1)
@@ -48,7 +48,7 @@ def disparity_loss_function(y_true, y_pred, crop_factor=0.8):
     left_to_right_disp = generate_image_right(left_disp_est, right_disp_est)
 
     # OPTIONAL CROP
-    if crop_factor > 0.0:
+    if crop_factor < 1.0:
         left_disp_est_c = crop_left(left_disp_est, crop_factor)
         right_disp_est_c = crop_right(right_disp_est, crop_factor)
         right_to_left_disp = crop_left(right_to_left_disp, crop_factor)
@@ -68,17 +68,22 @@ def disparity_loss_function(y_true, y_pred, crop_factor=0.8):
     disp_right_loss = tf.reduce_mean(tf.abs( get_disparity_smoothness(right_disp_est) ))
     disp_gradient_loss = disp_left_loss + disp_right_loss
 
+    total_disp_loss = 1.0 * total_lr_loss + 0.1 * disp_gradient_loss
+
+
     # SUPERVISED LOSS
     left_mask = tf.math.equal(left_disp, 0.0)
     right_mask = tf.math.equal(right_disp, 0.0)
     # only keeps the estimated disparity for the masked regions, i.e. the wires
-    masked_left_disp_est = tf.where(left_mask, tf.zeros(tf.shape(left_disp)), left_disp_est)
-    masked_right_disp_est = tf.where(right_mask, tf.zeros(tf.shape(right_disp)), right_disp_est)
+    masked_left_disp_est = tf.where(left_mask, tf.zeros(tf.shape(left_disp)), left_disp_est) if mask else left_disp_est
+    masked_right_disp_est = tf.where(right_mask, tf.zeros(tf.shape(right_disp)), right_disp_est) if mask else right_disp_est
     sup_left_loss = supervised_loss_function(left_disp, masked_left_disp_est) 
     sup_right_loss = supervised_loss_function(right_disp, masked_right_disp_est) 
     total_sup_loss = sup_left_loss + sup_right_loss
 
-    return 1.0 * total_lr_loss + 0.1 * disp_gradient_loss + 2.0 * total_sup_loss
+    supervised_weight = 1.0 #2.0
+
+    return 0 * total_disp_loss + supervised_weight * total_sup_loss
 
 # image reconstruction
 # l1 and ssim
@@ -106,4 +111,4 @@ def reconstruction_loss_function(y_true, y_pred, crop_factor=0.8):
 
     ssim_weight = 0.9
     image_loss = ssim_weight * total_ssim + (1 - ssim_weight) * total_l1
-    return image_loss
+    return 0 * image_loss
