@@ -79,13 +79,13 @@ def get_callbacks(model, basemodel, train_generator, test_generator, runPath):
 
             # Metrics
             # e = evaluate(model, test_set['rgb'], test_set['depth'], test_set['crop'], batch_size=6, verbose=True)
-            e = compute_errors(np.stack(disps_test[0], axis=0), np.stack(disps_pred_test[0], axis=0))
+            e = compute_errors(np.stack(disps_test[0], axis=0), np.stack(disps_pred_test[0][0], axis=0)) # FIX!!
             logs.update({'rel': e[3]})
             logs.update({'rms': e[4]})
             logs.update({'log10': e[5]})
 
             super().on_epoch_end(epoch, logs)
-    callbacks.append( LRTensorBoard(log_dir=runPath, histogram_freq=0, write_graph=False, write_grads=False) )
+    callbacks.append( LRTensorBoard(log_dir=runPath, histogram_freq=0, write_graph=False, write_grads=True) )
 
     # Callback: Learning Rate Scheduler
     # lr_schedule = keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.7, patience=5, min_lr=0.00001, min_delta=1e-2, verbose=1)
