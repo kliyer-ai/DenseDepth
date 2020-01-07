@@ -57,8 +57,8 @@ def get_callbacks(model, basemodel, train_generator, test_generator, runPath):
 
                 h, w = disps_train[0].shape[0], disps_train[0].shape[1]
 
-                rgb_train = list(map(lambda x: resize(x, (h,w), preserve_range=True, mode='reflect', anti_aliasing=True), xs_train))
-                rgb_test = list(map(lambda x: resize(x, (h,w), preserve_range=True, mode='reflect', anti_aliasing=True), xs_test))
+                rgb_train = list(map(lambda x: resize(x, (h,w), preserve_range=True, mode='reflect', anti_aliasing=True), xs_train[:2]))
+                rgb_test = list(map(lambda x: resize(x, (h,w), preserve_range=True, mode='reflect', anti_aliasing=True), xs_test[:2]))
 
                 gt_train = list(map(lambda x: plasma(x[:,:,0])[:,:,:3], disps_train)) 
                 gt_test = list(map(lambda x: plasma(x[:,:,0])[:,:,:3], disps_test))

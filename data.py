@@ -59,8 +59,9 @@ class BasicRGBSequence(Sequence):
         disp_ph = np.zeros(get_shape_depth(batch_size=self.batch_size, halved=disp_is_halved))
         left_image_ph = np.zeros(get_shape_rgb(batch_size=self.batch_size))
         right_image_ph = np.zeros(get_shape_rgb(batch_size=self.batch_size))
+        num_disps_ph = np.zeros((self.batch_size,))
 
-        batch_x = [left_image_ph, right_image_ph]
+        batch_x = [left_image_ph, right_image_ph, num_disps_ph]
         batch_y = [np.stack([disp_ph, disp_ph.copy()], axis=1), np.stack([left_image_ph.copy(), right_image_ph.copy()], axis=1)]
 
         # Augmentation of RGB images
@@ -82,11 +83,13 @@ class BasicRGBSequence(Sequence):
 
             batch_x[0][i] = left_image
             batch_x[1][i] = right_image
+            batch_x[2][i] = int(sample[4])
             
             batch_y[0][i,0] = left_disparity
             batch_y[0][i,1] = right_disparity
             batch_y[1][i,0] = left_image.copy()
             batch_y[1][i,1] = right_image.copy()
+
 
             # DEBUG:
             #self.policy.debug_img(batch_x[i], np.clip(DepthNorm(batch_y[i])/maxDepth,0,1), idx, i)

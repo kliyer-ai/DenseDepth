@@ -41,11 +41,16 @@ def supervised_loss_function(y_true, y_pred):
 def disparity_loss_function(y_true, y_pred, crop_factor=0.8, mask=False):
     left_disp = y_true[:, 0]
     right_disp = y_true[:, 1]
+
+    graph = tf.get_default_graph()
+    num_disp = graph.get_tensor_by_name('input_3:0')
+    print(num_disp)
+
     left_disp_est, right_disp_est = tf.unstack(y_pred, axis=1)
     
     # LR CONSISTENCY
-    right_to_left_disp = generate_image_left(right_disp_est, left_disp_est)
-    left_to_right_disp = generate_image_right(left_disp_est, right_disp_est)
+    right_to_left_disp = generate_image_left(right_disp_est, left_disp_est, num_disp)
+    left_to_right_disp = generate_image_right(left_disp_est, right_disp_est, num_disp)
 
     # OPTIONAL CROP
     if crop_factor < 1.0:
@@ -81,9 +86,9 @@ def disparity_loss_function(y_true, y_pred, crop_factor=0.8, mask=False):
     sup_right_loss = supervised_loss_function(right_disp, masked_right_disp_est) 
     total_sup_loss = sup_left_loss + sup_right_loss
 
-    supervised_weight = 1.0 #2.0
+    supervised_weight = 0.0 #2.0
 
-    return 0 * total_disp_loss + supervised_weight * total_sup_loss
+    return 1 * total_disp_loss + supervised_weight * total_sup_loss
 
 # image reconstruction
 # l1 and ssim
@@ -111,4 +116,4 @@ def reconstruction_loss_function(y_true, y_pred, crop_factor=0.8):
 
     ssim_weight = 0.9
     image_loss = ssim_weight * total_ssim + (1 - ssim_weight) * total_l1
-    return 0 * image_loss
+    return 1 * image_loss

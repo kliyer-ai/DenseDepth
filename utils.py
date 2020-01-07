@@ -4,7 +4,7 @@ from shape import get_shape_rgb, get_shape_depth
 import keras.backend as K
 
 
-def predict(model, images, batch_size=2):
+def predict(model, inputs, batch_size=2):
     # Support multiple RGBs, one RGB image, even grayscale 
 
     def normalize_image(image):
@@ -12,13 +12,17 @@ def predict(model, images, batch_size=2):
         if len(image.shape) < 4: image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2]))
         return image
 
+    images = inputs[:2]
+    num_disp = [inputs[-1]]
     if isinstance(images, list): 
         for i in range(len(images)):
             images[i] = normalize_image(images[i])
+
+    
     else: images = normalize_image(images)
 
     # Compute predictions
-    return model.predict(images, batch_size=1)
+    return model.predict(images + [np.array(num_disp)], batch_size=1)
 
 def scale_up(scale, images):
     from skimage.transform import resize

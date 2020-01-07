@@ -8,7 +8,7 @@ from bilinear_sampler import generate_image_left, generate_image_right
 import tensorflow as tf
 from custom_objects import custom_objects
 
-def get_decoders(models, is_halffeatures=True):
+def get_decoders(models, num_disp, is_halffeatures=True):
         left_img = models[0].input
         right_img = models[1].input
 
@@ -65,8 +65,8 @@ def get_decoders(models, is_halffeatures=True):
         right_disp = Conv2D(filters=1, kernel_size=3, strides=1, padding='same', name='disp_right')(decoders[1])
         right_disp = Lambda(lambda x: tf.reverse(x, axis=[2]), name='reverse_disp_right')(right_disp)  # 2 because of batch
 
-        left_reconstruction = Lambda(lambda x: generate_image_left(x[0], x[1]), name='recon_left')([right_img, left_disp])
-        right_reconstruction = Lambda(lambda x: generate_image_right(x[0], x[1]), name='recon_right')([left_img, right_disp])
+        left_reconstruction = Lambda(lambda x: generate_image_left(x[0], x[1], x[2]), name='recon_left')([right_img, left_disp, num_disp])
+        right_reconstruction = Lambda(lambda x: generate_image_right(x[0], x[1], x[2]), name='recon_right')([left_img, right_disp, num_disp])
         
         disparities = Lambda(lambda xs: tf.stack(xs, axis=1), name='disparities')([left_disp, right_disp])
         reconstructions = Lambda(lambda xs: tf.stack(xs, axis=1), name='reconstructions')([left_reconstruction, right_reconstruction])
@@ -91,12 +91,20 @@ def create_model(existing='', encoder='dense169'):
 
         right_model = add_right_input(left_model)
 
+        num_disp = Input(shape=(1,), dtype=tf.int16)
+
+        print(left_model.input)
+        print(right_model.input)
+        print(num_disp)
+
         print('Base model loaded.')
 
-        disparities, reconstructions = get_decoders([left_model, right_model])
+        disparities, reconstructions = get_decoders([left_model, right_model], num_disp)
+        print(disparities)
+        print(reconstructions)
 
         # Create the model
-        model = Model(inputs=[left_model.input, right_model.input], outputs=[disparities, reconstructions])
+        model = Model(inputs=[left_model.input, right_model.input, num_disp], outputs=[disparities, reconstructions])
     else:
         # Load model from file
         if not existing.endswith('.h5'):

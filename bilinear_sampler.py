@@ -17,7 +17,7 @@
 from __future__ import absolute_import, division, print_function
 import tensorflow as tf
 
-def bilinear_sampler_1d_h(input_images, x_offset, wrap_mode='border', name='bilinear_sampler', **kwargs):
+def bilinear_sampler_1d_h(input_images, x_offset, max_disp, wrap_mode='border', name='bilinear_sampler', **kwargs):
     def _repeat(x, n_repeats):
         with tf.variable_scope('_repeat'):
             rep = tf.tile(tf.expand_dims(x, 1), [1, n_repeats])
@@ -80,7 +80,9 @@ def bilinear_sampler_1d_h(input_images, x_offset, wrap_mode='border', name='bili
             x_t_flat = tf.reshape(x_t_flat, [-1])
             y_t_flat = tf.reshape(y_t_flat, [-1])
 
-            x_t_flat = x_t_flat + tf.reshape(x_offset, [-1]) * _max_disparity #_width_f
+            # x_t_flat = x_t_flat + tf.reshape(x_offset, [-1]) * tf.reshape(_max_disparity, [-1]) #_width_f
+            # x_t_flat = x_t_flat + tf.reshape(tf.multiply(x_offset, _max_disparity) , [-1])
+            x_t_flat = x_t_flat + tf.reshape(x_offset * _max_disparity, [-1])
 
             input_transformed = _interpolate(input_images, x_t_flat, y_t_flat)
 
@@ -98,14 +100,17 @@ def bilinear_sampler_1d_h(input_images, x_offset, wrap_mode='border', name='bili
         _width_f  = tf.cast(_width,  tf.float32)
 
         _wrap_mode = wrap_mode
-        _max_disparity = 255.0
+        _max_disparity = tf.cast(max_disp,  tf.float32)
+        _max_disparity = tf.reshape(_max_disparity, [-1, 1, 1, 1]) # make sure same rank as disp map
+        _max_disparity = tf.tile(_max_disparity, [1, 320, 320, 1]) # repeat rows and columns 
+        # _max_disparity = tf.reshape(tf.cast(max_disp,  tf.float32), [_num_batch, _height, _width, _num_channels]) 
 
         # added clip 
         output = _transform(input_images, x_offset)
         return output
 
-def generate_image_left(img, disp):
-    return bilinear_sampler_1d_h(img, -disp)
+def generate_image_left(img, disp, max_disp):
+    return bilinear_sampler_1d_h(img, -disp, max_disp)
 
-def generate_image_right(img, disp):
-    return bilinear_sampler_1d_h(img, disp)
+def generate_image_right(img, disp, max_disp):
+    return bilinear_sampler_1d_h(img, disp, max_disp)
