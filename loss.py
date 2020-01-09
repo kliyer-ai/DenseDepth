@@ -23,13 +23,17 @@ def get_disparity_smoothness(disp):
     return total_var
 
 def crop_left(img, crop_factor):
-    batch_size, height, width, _ = get_shape_rgb(batch_size=True)
-    crop_width = int(crop_factor * width)
+    height       = tf.shape(img)[1]
+    width        = tf.shape(img)[2]
+    width_f      = tf.cast(width, tf.float32)
+    crop_width   = tf.cast(crop_factor * width_f, tf.int32)
     return tf.image.crop_to_bounding_box(img, 0, width - crop_width, height, crop_width)
 
 def crop_right(img, crop_factor):
-    batch_size, height, width, _ = get_shape_rgb(batch_size=True)
-    crop_width = int(crop_factor * width)
+    height       = tf.shape(img)[1]
+    width        = tf.shape(img)[2]
+    width_f      = tf.cast(width, tf.float32)
+    crop_width   = tf.cast(crop_factor * width_f, tf.int32)
     return tf.image.crop_to_bounding_box(img, 0, 0, height, crop_width)
 
 # =============================================================================================
@@ -38,7 +42,7 @@ def supervised_loss_function(y_true, y_pred):
     l1_factor = 0.9
     return (1 - l1_factor) * ssim(y_true, y_pred) + 1 * edges(y_true, y_pred) + l1_factor * point_wise_depth(y_true, y_pred)
 
-def disparity_loss_function(y_true, y_pred, crop_factor=0.8, mask=False):
+def disparity_loss_function(y_true, y_pred, crop_factor=0.8, mask=True):
     left_disp = y_true[:, 0]
     right_disp = y_true[:, 1]
 
@@ -98,7 +102,7 @@ def reconstruction_loss_function(y_true, y_pred, crop_factor=0.8):
     left_recon, right_recon = tf.unstack(y_pred, axis=1)
 
     # OPTIONAL CROP
-    if crop_factor > 0.0:
+    if crop_factor < 1.0:
         left_image = crop_left(left_image, crop_factor)
         right_image = crop_right(right_image, crop_factor)
         left_recon = crop_left(left_recon, crop_factor)

@@ -58,7 +58,7 @@ def get_decoders(models, num_disp, is_halffeatures=True):
         decoders = upproject(decoders, int(decode_filters/4), 'up2', concat_with='pool2_pool')
         decoders = upproject(decoders, int(decode_filters/8), 'up3', concat_with='pool1')
         decoders = upproject(decoders, int(decode_filters/16), 'up4', concat_with='conv1/relu')
-        if True: decoders = upproject(decoders, int(decode_filters/32), 'up5', concat_with='input')
+        if False: decoders = upproject(decoders, int(decode_filters/32), 'up5', concat_with='input')
 
         # Extract depths (final layer)
         left_disp = Conv2D(filters=1, kernel_size=3, strides=1, padding='same', name='disp_left')(decoders[0])
