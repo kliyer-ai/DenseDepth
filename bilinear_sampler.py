@@ -16,8 +16,10 @@
 
 from __future__ import absolute_import, division, print_function
 import tensorflow as tf
+from shape import get_shape_depth
 
-def bilinear_sampler_1d_h(input_images, x_offset, max_disp, wrap_mode='border', name='bilinear_sampler', **kwargs):
+# I CHANGED TO WRAP MODE TO EDGE
+def bilinear_sampler_1d_h(input_images, x_offset, max_disp, wrap_mode='edge', name='bilinear_sampler', **kwargs):
     def _repeat(x, n_repeats):
         with tf.variable_scope('_repeat'):
             rep = tf.tile(tf.expand_dims(x, 1), [1, n_repeats])
@@ -100,9 +102,10 @@ def bilinear_sampler_1d_h(input_images, x_offset, max_disp, wrap_mode='border', 
         _width_f  = tf.cast(_width,  tf.float32)
 
         _wrap_mode = wrap_mode
+
         _max_disparity = tf.cast(max_disp,  tf.float32)
-        _max_disparity = tf.reshape(_max_disparity, [-1, 1, 1, 1]) # make sure same rank as disp map
-        _max_disparity = tf.tile(_max_disparity, [1, 320, 320, 1]) # repeat rows and columns 
+        _max_disparity = tf.reshape(_max_disparity, [_num_batch, 1, 1, 1]) # make sure same rank as disp map
+        _max_disparity = tf.tile(_max_disparity, [1, _height, _width, 1]) # repeat rows and columns 
         # _max_disparity = tf.reshape(tf.cast(max_disp,  tf.float32), [_num_batch, _height, _width, _num_channels]) 
 
         # added clip 
@@ -110,6 +113,7 @@ def bilinear_sampler_1d_h(input_images, x_offset, max_disp, wrap_mode='border', 
         return output
 
 def generate_image_left(img, disp, max_disp):
+    tf.print(max_disp)
     return bilinear_sampler_1d_h(img, -disp, max_disp)
 
 def generate_image_right(img, disp, max_disp):
