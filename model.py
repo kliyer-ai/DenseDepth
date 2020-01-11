@@ -91,7 +91,7 @@ def create_model(existing='', encoder='dense169'):
 
         right_model = add_right_input(left_model)
 
-        num_disp = Input(shape=(1,), dtype=tf.int16)
+        num_disp = Input(shape=(1,))
 
         print(left_model.input)
         print(right_model.input)

@@ -18,8 +18,10 @@ from __future__ import absolute_import, division, print_function
 import tensorflow as tf
 from shape import get_shape_depth
 
+from tensorflow.compat.v2.image import resize, ResizeMethod
+
 # I CHANGED TO WRAP MODE TO EDGE
-def bilinear_sampler_1d_h(input_images, x_offset, max_disp, wrap_mode='edge', name='bilinear_sampler', **kwargs):
+def bilinear_sampler_1d_h(input_images, x_offset, max_disp, resize_images, wrap_mode='border', name='bilinear_sampler', **kwargs):
     def _repeat(x, n_repeats):
         with tf.variable_scope('_repeat'):
             rep = tf.tile(tf.expand_dims(x, 1), [1, n_repeats])
@@ -93,6 +95,20 @@ def bilinear_sampler_1d_h(input_images, x_offset, max_disp, wrap_mode='edge', na
             return output
 
     with tf.variable_scope(name):
+        _wrap_mode = wrap_mode
+
+        _disp_height       = tf.shape(x_offset)[1]
+        _disp_width        = tf.shape(x_offset)[2]
+        _original_height       = tf.shape(input_images)[1]
+        _original_width        = tf.shape(input_images)[2]
+
+        if resize_images:
+            # input_images = resize(input_images, [_disp_height, _disp_width], method=ResizeMethod.AREA, antialias=True)
+            input_images = tf.image.resize_area(input_images, [_disp_height, _disp_width], align_corners=True)
+            input_images = tf.clip_by_value(input_images, 0.0, 1.0)
+            _downscale_factor = tf.cast( _original_width / _disp_width, tf.float32)
+            max_disp = max_disp / _downscale_factor
+
         _num_batch    = tf.shape(input_images)[0]
         _height       = tf.shape(input_images)[1]
         _width        = tf.shape(input_images)[2]
@@ -101,20 +117,15 @@ def bilinear_sampler_1d_h(input_images, x_offset, max_disp, wrap_mode='edge', na
         _height_f = tf.cast(_height, tf.float32)
         _width_f  = tf.cast(_width,  tf.float32)
 
-        _wrap_mode = wrap_mode
-
         _max_disparity = tf.cast(max_disp,  tf.float32)
         _max_disparity = tf.reshape(_max_disparity, [_num_batch, 1, 1, 1]) # make sure same rank as disp map
-        _max_disparity = tf.tile(_max_disparity, [1, _height, _width, 1]) # repeat rows and columns 
-        # _max_disparity = tf.reshape(tf.cast(max_disp,  tf.float32), [_num_batch, _height, _width, _num_channels]) 
+        _max_disparity = tf.tile(_max_disparity, [1, _disp_height, _disp_width, 1]) # repeat rows and columns 
 
-        # added clip 
         output = _transform(input_images, x_offset)
         return output
 
-def generate_image_left(img, disp, max_disp):
-    tf.print(max_disp)
-    return bilinear_sampler_1d_h(img, -disp, max_disp)
+def generate_image_left(img, disp, max_disp, resize=True):
+    return bilinear_sampler_1d_h(img, -disp, max_disp, resize)
 
-def generate_image_right(img, disp, max_disp):
-    return bilinear_sampler_1d_h(img, disp, max_disp)
+def generate_image_right(img, disp, max_disp, resize=True):
+    return bilinear_sampler_1d_h(img, disp, max_disp, resize)

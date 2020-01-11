@@ -5,7 +5,7 @@ from zipfile import ZipFile
 from keras.utils import Sequence
 from augment import BasicPolicy
 
-from utils import resize
+from utils import resize, down_scale
 
 from shape import get_shape_rgb, get_shape_depth
 
@@ -54,15 +54,17 @@ class BasicRGBSequence(Sequence):
         return int(np.ceil(self.N / float(self.batch_size)))
 
     def __getitem__(self, idx, is_apply_policy=False):
-        disp_is_halved = False
+        disp_is_halved = True
 
-        disp_ph = np.zeros(get_shape_depth(batch_size=self.batch_size, halved=disp_is_halved))
         left_image_ph = np.zeros(get_shape_rgb(batch_size=self.batch_size))
         right_image_ph = np.zeros(get_shape_rgb(batch_size=self.batch_size))
         num_disps_ph = np.zeros((self.batch_size,1))
-
         batch_x = [left_image_ph, right_image_ph, num_disps_ph]
-        batch_y = [np.stack([disp_ph, disp_ph.copy()], axis=1), np.stack([left_image_ph.copy(), right_image_ph.copy()], axis=1)]
+
+        disp_ph = np.zeros(get_shape_depth(batch_size=self.batch_size, halved=disp_is_halved))
+        left_y_image_ph = np.zeros(get_shape_rgb(batch_size=self.batch_size, halved=disp_is_halved))
+        right_y_image_ph = np.zeros(get_shape_rgb(batch_size=self.batch_size, halved=disp_is_halved))
+        batch_y = [np.stack([disp_ph, disp_ph.copy()], axis=1), np.stack([left_y_image_ph, right_y_image_ph], axis=1)]
 
         # Augmentation of RGB images
         for i in range(self.batch_size):
@@ -70,25 +72,27 @@ class BasicRGBSequence(Sequence):
             sample = self.dataset[index]
 
             left_image = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[0]]) )).reshape(get_shape_rgb())/255,0,1)
-            left_image = resize(left_image, get_shape_rgb()[1])
             right_image = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[1]]) )).reshape(get_shape_rgb())/255,0,1)
-            right_image = resize(right_image, get_shape_rgb()[1])
 
-            left_disparity = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[2]]) )).reshape(get_shape_depth(halved=disp_is_halved))/255,0,1)
-            left_disparity = resize(left_disparity, get_shape_depth(halved=disp_is_halved)[1])
-            right_disparity = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[3]]) )).reshape(get_shape_depth(halved=disp_is_halved))/255,0,1)
-            right_disparity = resize(right_disparity, get_shape_depth(halved=disp_is_halved)[1])
+            left_disparity = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[2]]) )).reshape(get_shape_depth())/255,0,1)
+            # left_disparity = resize(left_disparity, get_shape_depth(halved=disp_is_halved)[1])
+            left_disparity = down_scale(left_disparity, 2)
+            right_disparity = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[3]]) )).reshape(get_shape_depth())/255,0,1)
+            # right_disparity = resize(right_disparity, get_shape_depth(halved=disp_is_halved)[1])
+            right_disparity = down_scale(right_disparity, 2)
 
             if self.train and is_apply_policy: xs, y = self.policy(xs, y)
 
             batch_x[0][i] = left_image
             batch_x[1][i] = right_image
-            batch_x[2][i,0] = int(sample[4])
+            batch_x[2][i,0] = float(sample[4])
             
             batch_y[0][i,0] = left_disparity
             batch_y[0][i,1] = right_disparity
-            batch_y[1][i,0] = left_image.copy()
-            batch_y[1][i,1] = right_image.copy()
+            # batch_y[1][i,0] = resize(left_image, get_shape_rgb(halved=disp_is_halved)[1])
+            # batch_y[1][i,1] = resize(right_image, get_shape_rgb(halved=disp_is_halved)[1])
+            batch_y[1][i,0] = down_scale(left_image, 2)
+            batch_y[1][i,1] = down_scale(right_image, 2)
 
 
             # DEBUG:

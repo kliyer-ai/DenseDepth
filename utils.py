@@ -4,22 +4,19 @@ from shape import get_shape_rgb, get_shape_depth
 import keras.backend as K
 
 
+# Support multiple RGBs, one RGB image, even grayscale 
+def normalize_image_dims(image):
+    if len(image.shape) < 3: image = np.stack((image,image,image), axis=2)
+    if len(image.shape) < 4: image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2]))
+    return image
+
 def predict(model, inputs, batch_size=2):
-    # Support multiple RGBs, one RGB image, even grayscale 
-
-    def normalize_image(image):
-        if len(image.shape) < 3: image = np.stack((image,image,image), axis=2)
-        if len(image.shape) < 4: image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2]))
-        return image
-
     images = inputs[:2]
     num_disp = [inputs[-1]]
     if isinstance(images, list): 
         for i in range(len(images)):
-            images[i] = normalize_image(images[i])
-
-    
-    else: images = normalize_image(images)
+            images[i] = normalize_image_dims(images[i])
+    else: images = normalize_image_dims(images)
 
     # Compute predictions
     return model.predict(images + [np.array(num_disp)], batch_size=1)
@@ -40,7 +37,7 @@ def load_images(image_files):
     loaded_images = []
     for file in image_files:
         x = np.clip(np.asarray(Image.open( file ), dtype=float) / 255, 0, 1)
-        loaded_images.append(x)
+        loaded_images.append(normalize_image_dims(x))
     return loaded_images # np.stack(loaded_images, axis=0)
 
 def to_multichannel(i):
@@ -106,7 +103,7 @@ def resize(img, resolution, padding=6):
 
 def down_scale(img, factor):
     from skimage.transform import downscale_local_mean
-    return downscale_local_mean(img, factor)
+    return downscale_local_mean(img, (2,2,1))
 
 def load_test_data(test_data_zip_file, nr_inputs=1):
     print('Loading test data...', end='')
