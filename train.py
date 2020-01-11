@@ -46,7 +46,7 @@ model = create_model( existing=args.checkpoint, encoder=args.encoder)
 train_generator, test_generator = get_train_test_data( args.bs, data_zipfile=args.data, nr_inputs=args.nr_inputs)
 
 # Training session details
-runID = datetime.now().strftime('%d-%b-%H:%M') + '-m' + args.encoder + '-e' + str(args.epochs) + '-bs' + str(args.bs) + '-lr' + str(args.lr) + '-ipts' + str(args.nr_inputs) + '-' + args.name
+runID = datetime.now().strftime('%d-%b-%H:%M') + '-m' + args.encoder + '-e' + str(args.epochs) + '-bs' + str(args.bs) + '-lr' + str(args.lr) + '-' + args.name
 outputPath = './models/'
 runPath = outputPath + runID
 pathlib.Path(runPath).mkdir(parents=True, exist_ok=True)
