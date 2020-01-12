@@ -24,6 +24,9 @@ def print_info(img):
 parser = argparse.ArgumentParser(description='High Quality Monocular Depth Estimation via Transfer Learning')
 parser.add_argument('--model', default='nyu.h5', type=str, help='Trained Keras model file.')
 parser.add_argument('--input', default='examples/*.png', type=str, help='Input filename or folder.')
+parser.add_argument('--gt', default='', type=str, help='Input filename or folder.')
+parser.add_argument('--name', default='', type=str, help='name as prefix')
+parser.add_argument('--folder', default='', type=str, help='folder name')
 args = parser.parse_args()
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '1'
@@ -47,8 +50,8 @@ inputs.append(np.array([1]))
 
 # GT
 base_path, _ = os.path.split(args.input)
-gt = np.clip(np.asarray(Image.open( os.path.join(base_path, 'gt0.png') ), dtype=float) / 255, 0, 1)
-# gt = np.clip(np.asarray(Image.open( os.path.join(base_path, '320_depth0.png') ), dtype=float) / 255, 0, 1)
+# gt = np.clip(np.asarray(Image.open( os.path.join(base_path, 'gt0.png') ), dtype=float) / 255, 0, 1)
+gt = np.clip(np.asarray(Image.open( os.path.join(base_path, args.gt) ), dtype=float) / 255, 0, 1)
 print(gt.shape)
 # downsample
 is_halved=True
@@ -73,10 +76,21 @@ print(inputs[1].shape)
 print(inputs[2].shape)
 
 # Display results
-viz = display_images(left_disp.copy(), inputs[:2], gt=[gt], is_colormap=False)
+viz = display_images(left_disp.copy(), inputs[:1], gt=[gt], is_colormap=False)
+# viz = display_images(left_disp.copy(), inputs[:1], is_colormap=False)
 split_path = os.path.normpath(args.input).split('/')
 if len(split_path) < 2: path = 'test.png'
-else: path = split_path[-2] + '_pred.png'
+else: path = split_path[-2] + '_pred_' + args.name + '.png'
+
+if args.folder != '' and not os.path.isdir(args.folder):
+    os.mkdir(args.folder)
+
+path = args.folder + '/' + path
+
+with open(path + '.txt', 'w') as f:
+    f.write("{:>10}, {:>10}, {:>10}, {:>10}, {:>10}, {:>10}".format('a1', 'a2', 'a3', 'rel', 'rms', 'log_10'))
+    f.write('\n')
+    f.write("{:10.4f}, {:10.4f}, {:10.4f}, {:10.4f}, {:10.4f}, {:10.4f}".format(metrics[0],metrics[1],metrics[2],metrics[3],metrics[4],metrics[5]))
 
 print('saved at', path)
 # cv.imwrite(path, np.uint8(viz*255))
