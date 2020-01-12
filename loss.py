@@ -1,4 +1,3 @@
-import keras.backend as K
 import tensorflow as tf
 from bilinear_sampler import generate_image_left, generate_image_right
 from shape import get_shape_rgb
@@ -6,16 +5,21 @@ from shape import get_shape_rgb
 def edges(y_true, y_pred):
     dy_true, dx_true = tf.image.image_gradients(y_true)
     dy_pred, dx_pred = tf.image.image_gradients(y_pred)
-    l_edges = K.mean(K.abs(dy_pred - dy_true) +
-                     K.abs(dx_pred - dx_true), axis=-1)
-    return K.mean(l_edges)
+    return tf.reduce_mean(tf.abs(dy_pred - dy_true) + tf.abs(dx_pred - dx_true)) 
 
-def point_wise_depth(y_true, y_pred):
-    l_depth = K.mean(K.abs(y_pred - y_true), axis=-1)
-    return K.mean(l_depth)
+def l1_loss(y_true, y_pred):
+    l1 = tf.reduce_mean(tf.abs(y_pred - y_true)) 
+    return l1
 
 def ssim(y_true, y_pred):
-    return K.clip((1 - tf.image.ssim(y_true, y_pred, 1.0)) * 0.5, 0, 1)
+    return tf.clip_by_value((1 - tf.image.ssim(y_true, y_pred, 1.0)) * 0.5, 0.0, 1.0)
+
+def image_loss(y_true, y_pred):
+    l1 = l1_loss(y_true, y_pred)
+    s = ssim(y_true, y_pred)
+    ssim_weight = 0.9
+    image_loss = ssim_weight * s + (1 - ssim_weight) * l1
+    return image_loss
 
 def get_disparity_smoothness(disp):
     disp_gradients_y, disp_gradients_x = tf.image.image_gradients(disp)
@@ -39,44 +43,37 @@ def crop_right(img, crop_factor):
 # =============================================================================================
 
 def supervised_loss_function(y_true, y_pred):
-    l1_factor = 0.9
-    return (1 - l1_factor) * ssim(y_true, y_pred) + 1 * edges(y_true, y_pred) + l1_factor * point_wise_depth(y_true, y_pred)
+    # edges loss ensures that wires are smooth
+    return image_loss(y_true, y_pred) + 1 * edges(y_true, y_pred)
 
-def disparity_loss_function(y_true, y_pred, crop_factor=0.8, mask=True):
+def disparity_loss_function(y_true, y_pred, crop_factor=0.6, mask=False):
     left_disp = y_true[:, 0]
     right_disp = y_true[:, 1]
 
     graph = tf.get_default_graph()
     num_disp = graph.get_tensor_by_name('input_3:0')
-    print(num_disp)
 
     left_disp_est, right_disp_est = tf.unstack(y_pred, axis=1)
     
     # LR CONSISTENCY
-    right_to_left_disp = generate_image_left(right_disp_est, left_disp_est, num_disp)
-    left_to_right_disp = generate_image_right(left_disp_est, right_disp_est, num_disp)
+    right_to_left_disp = generate_image_left(right_disp_est, left_disp_est, num_disp, resize=False)
+    left_to_right_disp = generate_image_right(left_disp_est, right_disp_est, num_disp, resize=False)
 
     # OPTIONAL CROP
     if crop_factor < 1.0:
-        left_disp_est_c = crop_left(left_disp_est, crop_factor)
-        right_disp_est_c = crop_right(right_disp_est, crop_factor)
-        right_to_left_disp = crop_left(right_to_left_disp, crop_factor)
-        left_to_right_disp = crop_right(left_to_right_disp, crop_factor)
+        lr_left_loss = tf.reduce_mean(tf.abs(crop_left(right_to_left_disp, crop_factor) - crop_left(left_disp_est, crop_factor)))
+        lr_right_loss = tf.reduce_mean(tf.abs(crop_right(left_to_right_disp, crop_factor) - crop_right(right_disp_est, crop_factor)))
     else:
-        left_disp_est_c = left_disp_est
-        right_disp_est_c = right_disp_est
-
-    lr_left_loss = tf.reduce_mean(tf.abs(right_to_left_disp - left_disp_est_c))
-    lr_right_loss = tf.reduce_mean(tf.abs(left_to_right_disp - right_disp_est_c))
+        lr_left_loss = tf.reduce_mean(tf.abs(right_to_left_disp - left_disp_est))
+        lr_right_loss = tf.reduce_mean(tf.abs(left_to_right_disp - right_disp_est))
     total_lr_loss = lr_left_loss + lr_right_loss
 
     # DISPARITY SMOOTHNESS
-    # Acts as regularization term
-    # should edges be emphasized??
     disp_left_loss  = tf.reduce_mean(tf.abs( get_disparity_smoothness(left_disp_est) )) 
     disp_right_loss = tf.reduce_mean(tf.abs( get_disparity_smoothness(right_disp_est) ))
     disp_gradient_loss = disp_left_loss + disp_right_loss
 
+    # TOTAL SELF SUPERVISED LOSS
     total_disp_loss = 1.0 * total_lr_loss + 0.1 * disp_gradient_loss
 
 
@@ -90,13 +87,12 @@ def disparity_loss_function(y_true, y_pred, crop_factor=0.8, mask=True):
     sup_right_loss = supervised_loss_function(right_disp, masked_right_disp_est) 
     total_sup_loss = sup_left_loss + sup_right_loss
 
-    supervised_weight = 0.0 #2.0
-
-    return 1 * total_disp_loss + supervised_weight * total_sup_loss
+    supervised_weight = 1.0 #2.0
+    return 0 * total_disp_loss + supervised_weight * total_sup_loss
 
 # image reconstruction
 # l1 and ssim
-def reconstruction_loss_function(y_true, y_pred, crop_factor=0.8):
+def reconstruction_loss_function(y_true, y_pred, crop_factor=0.6):
     left_image = y_true[:, 0]
     right_image = y_true[:, 1]
     left_recon, right_recon = tf.unstack(y_pred, axis=1)
@@ -108,16 +104,7 @@ def reconstruction_loss_function(y_true, y_pred, crop_factor=0.8):
         left_recon = crop_left(left_recon, crop_factor)
         right_recon = crop_right(right_recon, crop_factor)
 
-    # L1
-    left_l1 = point_wise_depth(left_image, left_recon)
-    right_l1 = point_wise_depth(right_image, right_recon)
-    total_l1 = left_l1 + right_l1
-
-    # SSIM
-    left_ssim = ssim(left_image, left_recon)
-    right_ssim = ssim(right_image, right_recon)
-    total_ssim = left_ssim + right_ssim
-
-    ssim_weight = 0.9
-    image_loss = ssim_weight * total_ssim + (1 - ssim_weight) * total_l1
-    return 1 * image_loss
+    left_image_loss = image_loss(left_image, left_recon)
+    right_image_loss = image_loss(right_image, right_recon)
+    total_loss = left_image_loss + right_image_loss
+    return 0 * total_loss
