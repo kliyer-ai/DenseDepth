@@ -25,7 +25,6 @@ parser.add_argument('--gpus', type=int, default=1, help='The number of GPUs to u
 parser.add_argument('--gpuids', type=str, default='0', help='IDs of GPUs to use')
 parser.add_argument('--name', type=str, default='default', help='A name to attach to the training session')
 parser.add_argument('--checkpoint', type=str, default='', help='Start training from an existing model.')
-parser.add_argument('--full', dest='full', action='store_true', help='Full training with metrics, checkpoints, and image samples.')
 parser.add_argument('--nr_inputs', type=int, default=1, help='Number of images to use.')
 
 args = parser.parse_args()
