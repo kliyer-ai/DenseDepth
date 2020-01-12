@@ -34,6 +34,7 @@ def scale_up(scale, images):
     return np.stack(scaled)
 
 def load_images(image_files):
+    image_files = image_files.sort()
     print(image_files)
     loaded_images = []
     for file in image_files:
