@@ -18,8 +18,9 @@ def predict(model, inputs, batch_size=2):
             images[i] = normalize_image_dims(images[i])
     else: images = normalize_image_dims(images)
 
-    # Compute predictions
-    return model.predict(images + [np.array(num_disp)], batch_size=1)
+    predictions = model.predict(images + [np.array(num_disp)], batch_size=1)
+
+    return [np.clip(pred, 0.0, 1.0) for pred in predictions]
 
 def scale_up(scale, images):
     from skimage.transform import resize
@@ -45,7 +46,7 @@ def to_multichannel(i):
     i = i[:,:,0]
     return np.stack((i,i,i), axis=2)
         
-def display_images(outputs, inputs=None, gt=None, is_colormap=True, is_rescale=True):
+def display_images(outputs, inputs=None, gt=None, is_colormap=True, is_rescale=False):
     import matplotlib.pyplot as plt
     import skimage
     from skimage.transform import resize
@@ -137,10 +138,12 @@ def load_test_data(test_data_zip_file, nr_inputs=1):
 
 
 def compute_errors(gt, pred):
-    pred = np.clip(pred, 0 , 1)
-    gt = np.clip(gt, 0, 1)
-    pred = pred * 255 + 1
-    gt = gt * 255 + 1
+    mask = gt > 0.0
+    pred = pred[mask]
+    gt = gt[mask]
+    
+    pred = np.clip(pred * 255, 1, 255)
+    gt = np.clip(gt * 255, 1, 255) 
 
     thresh = np.maximum((gt / pred), (pred / gt))
     a1 = (thresh < 1.25   ).mean()
