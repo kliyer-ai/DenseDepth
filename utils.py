@@ -72,12 +72,6 @@ def display_images(outputs, inputs=None, gt=None, is_colormap=True, is_rescale=F
                 x = resize(x, shape, preserve_range=True, mode='reflect', anti_aliasing=True )
                 imgs.append(x)
         
-
-        if isinstance(gt, (list, tuple, np.ndarray)):
-            x = to_multichannel(gt[i])
-            x = resize(x, shape, preserve_range=True, mode='reflect', anti_aliasing=True )
-            imgs.append(x)
-
         if is_colormap:
             rescaled = outputs[i][:,:,0]
             if is_rescale:
@@ -86,6 +80,11 @@ def display_images(outputs, inputs=None, gt=None, is_colormap=True, is_rescale=F
             imgs.append(plasma(rescaled)[:,:,:3])
         else:
             imgs.append(to_multichannel(outputs[i]))
+
+        if isinstance(gt, (list, tuple, np.ndarray)):
+            x = to_multichannel(gt[i])
+            x = resize(x, shape, preserve_range=True, mode='reflect', anti_aliasing=True )
+            imgs.append(x)
 
         img_set = np.hstack(imgs)
         all_images.append(img_set)
