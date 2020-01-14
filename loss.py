@@ -42,9 +42,10 @@ def crop_right(img, crop_factor):
 
 # =============================================================================================
 
-def supervised_loss_function(y_true, y_pred):
+def supervised_loss_function(y_true, y_pred, include_edges=True):
     # edges loss ensures that wires are smooth
-    return image_loss(y_true, y_pred) + 1 * edges(y_true, y_pred)
+    alpha_edges = 1 if include_edges else 0
+    return image_loss(y_true, y_pred) + alpha_edges * edges(y_true, y_pred)
 
 def disparity_loss_function(y_true, y_pred, crop_factor=0.6, mask=False):
     left_disp = y_true[:, 0]
@@ -83,12 +84,12 @@ def disparity_loss_function(y_true, y_pred, crop_factor=0.6, mask=False):
     # only keeps the estimated disparity for the masked regions, i.e. the wires
     masked_left_disp_est = tf.where(left_mask, tf.zeros(tf.shape(left_disp)), left_disp_est) if mask else left_disp_est
     masked_right_disp_est = tf.where(right_mask, tf.zeros(tf.shape(right_disp)), right_disp_est) if mask else right_disp_est
-    sup_left_loss = supervised_loss_function(left_disp, masked_left_disp_est) 
-    sup_right_loss = supervised_loss_function(right_disp, masked_right_disp_est) 
+    sup_left_loss = supervised_loss_function(left_disp, masked_left_disp_est, include_edges=not mask) 
+    sup_right_loss = supervised_loss_function(right_disp, masked_right_disp_est, include_edges=not mask) 
     total_sup_loss = sup_left_loss + sup_right_loss
 
-    supervised_weight = 1.0 #2.0
-    return 0 * total_disp_loss + supervised_weight * total_sup_loss
+    supervised_weight = 0.0 #2.0
+    return 1 * total_disp_loss + supervised_weight * total_sup_loss
 
 # image reconstruction
 # l1 and ssim
@@ -107,4 +108,4 @@ def reconstruction_loss_function(y_true, y_pred, crop_factor=0.6):
     left_image_loss = image_loss(left_image, left_recon)
     right_image_loss = image_loss(right_image, right_recon)
     total_loss = left_image_loss + right_image_loss
-    return 0 * total_loss
+    return 1 * total_loss
