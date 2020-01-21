@@ -30,7 +30,7 @@ def get_train_test_data(batch_size, data_zipfile, nr_inputs=1):
     data, train, test = get_data(batch_size, data_zipfile)
 
     train_generator = BasicRGBSequence(data, train, batch_size, nr_inputs=nr_inputs, train=True)
-    test_generator = BasicRGBSequence(data, test, batch_size, nr_inputs=nr_inputs)
+    test_generator = BasicRGBSequence(data, test, batch_size, nr_inputs=nr_inputs, train=False)
 
     return train_generator, test_generator
 
