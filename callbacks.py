@@ -28,6 +28,7 @@ def get_callbacks(model, basemodel, train_generator, test_generator, runPath):
 
             self.num_samples = 6
             self.train_idx =  np.random.randint(low=0, high=len(train_generator), size=self.num_samples)
+            # always get same test samples
             self.test_idx = np.array(range(self.num_samples)) * (len(test_generator) // self.num_samples) # np.random.randint(low=0, high=len(test_generator), size=10)
 
         def on_epoch_end(self, epoch, logs=None):            
@@ -78,8 +79,9 @@ def get_callbacks(model, basemodel, train_generator, test_generator, runPath):
             self.writer.add_summary(tf.Summary(value=[tf.Summary.Value(tag='Test', image=make_image(255 * np.hstack(test_samples)))]), epoch)
 
             # Metrics
-            # e = evaluate(model, test_set['rgb'], test_set['depth'], test_set['crop'], batch_size=6, verbose=True)
-            e = compute_errors(np.stack(disps_test[0], axis=0), np.stack(disps_pred_test[0][0], axis=0)) # FIX!!
+            e = evaluate(model, test_generator)
+            
+            # e = compute_errors(disps_test[0], disps_pred_test[0,0]) # FIX!!
             logs.update({'rel': e[3]})
             logs.update({'rms': e[4]})
             logs.update({'log10': e[5]})

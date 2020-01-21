@@ -10,7 +10,7 @@ def normalize_image_dims(image):
     if len(image.shape) < 4: image = image.reshape((1, image.shape[0], image.shape[1], image.shape[2]))
     return image
 
-def predict(model, inputs, batch_size=2):
+def predict(model, inputs, batch_size=1):
     images = inputs[:2]
     num_disp = [inputs[-1]]
     if isinstance(images, list): 
@@ -18,7 +18,7 @@ def predict(model, inputs, batch_size=2):
             images[i] = normalize_image_dims(images[i])
     else: images = normalize_image_dims(images)
 
-    predictions = model.predict(images + [np.array(num_disp)], batch_size=1)
+    predictions = model.predict(images + [np.array(num_disp)], batch_size=batch_size)
 
     return [np.clip(pred, 0.0, 1.0) for pred in predictions]
 
@@ -138,6 +138,10 @@ def load_test_data(test_data_zip_file, nr_inputs=1):
 
 
 def compute_errors(gt, pred):
+    print(gt.shape)
+    print(pred.shape)
+
+    # masking to only compute loss over wires where disparity is defined 
     mask = gt > 0.0
     pred = pred[mask]
     gt = gt[mask]
@@ -155,38 +159,31 @@ def compute_errors(gt, pred):
     log_10 = (np.abs(np.log10(gt)-np.log10(pred))).mean()
     return a1, a2, a3, abs_rel, rmse, log_10
 
-def evaluate(model, rgb, depth, crop, batch_size=6, verbose=False):
-    N = len(rgb)
-
+def evaluate(model, test_generator, batch_size=4, verbose=False):
+    N = len(test_generator)
+    print('N: ', N)
     bs = batch_size
 
     predictions = []
     testSetDepths = []
-    
-    for i in range(N//bs):    
-        x = rgb[(i)*bs:(i+1)*bs,:,:,:]
-        
-        # Compute results
-        true_y = depth[(i)*bs:(i+1)*bs,:,:]
-        pred_y = scale_up(2, predict(model, x/255, batch_size=bs)[:,:,:,0]) * 10.0
-        
-        # Test time augmentation: mirror image estimate
-        pred_y_flip = scale_up(2, predict(model, x[...,::-1,:]/255, batch_size=bs)[:,:,:,0]) * 10.0
 
-        # Crop based on Eigen et al. crop
-        true_y = true_y[:,crop[0]:crop[1]+1, crop[2]:crop[3]+1]
-        pred_y = pred_y[:,crop[0]:crop[1]+1, crop[2]:crop[3]+1]
-        pred_y_flip = pred_y_flip[:,crop[0]:crop[1]+1, crop[2]:crop[3]+1]
-        
-        # Compute errors per image in batch
-        for j in range(len(true_y)):
-            predictions.append(   (0.5 * pred_y[j]) + (0.5 * np.fliplr(pred_y_flip[j]))   )
-            testSetDepths.append(   true_y[j]   )
+    for i in range(N):
+        xs_test, y_test = test_generator[i]
+        y_pred = model.predict(xs_test, batch_size=4)
+
+        disps_test = y_test[0]
+        disp_left_test = disps_test[:,0]
+
+        disps_pred = y_pred[0]
+        disp_left_pred = disps_pred[:,0]
+
+        predictions.append(disp_left_pred)
+        testSetDepths.append(disp_left_test)
 
     predictions = np.stack(predictions, axis=0)
     testSetDepths = np.stack(testSetDepths, axis=0)
 
-    e = compute_errors(predictions, testSetDepths)
+    e = compute_errors(testSetDepths, predictions)
 
     if verbose:
         print("{:>10}, {:>10}, {:>10}, {:>10}, {:>10}, {:>10}".format('a1', 'a2', 'a3', 'rel', 'rms', 'log_10'))
