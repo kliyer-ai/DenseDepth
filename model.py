@@ -2,7 +2,7 @@ import sys
 
 from keras import applications
 from keras.models import Model, load_model, Sequential
-from keras.layers import Input, InputLayer, Conv2D, Activation, LeakyReLU, Concatenate, Lambda
+from keras.layers import Input, InputLayer, Conv2D, Activation, LeakyReLU, Concatenate, Lambda, ELU, BatchNormalization
 from layers import BilinearUpSampling2D
 from bilinear_sampler import generate_image_left, generate_image_right
 import tensorflow as tf
@@ -17,7 +17,7 @@ def get_decoders(models, num_disp, is_halffeatures=True):
             layer = BilinearUpSampling2D((2, 2), name=name+'_upsampling2d')
             tensors = list(map(lambda x: layer(x) , tensors))
 
-            # Concatenate is only layer that exists separate for each input
+            # Input is only layer that exists separate for each input
             if concat_with == 'input':
                 skips = [
                     models[0].get_layer('input_1').get_output_at(0),
@@ -32,12 +32,23 @@ def get_decoders(models, num_disp, is_halffeatures=True):
             concat_right = Concatenate(name=name+'_concat_right')([tensors[1], skips[1]])
             tensors = [concat_left, concat_right]
 
+            layer = BatchNormalization()
+            tensors = list(map(lambda x: layer(x), tensors))
+
             layer = Conv2D(filters=filters, kernel_size=3, strides=1, padding='same', name=name+'_convA')
             tensors = list(map(lambda x: layer(x), tensors))
+
+            # layer = BatchNormalization()
+            # tensors = list(map(lambda x: layer(x), tensors))
+
             layer = LeakyReLU(alpha=0.2)
             tensors = list(map(lambda x: layer(x), tensors))
             layer = Conv2D(filters=filters, kernel_size=3, strides=1, padding='same', name=name+'_convB')
             tensors = list(map(lambda x: layer(x), tensors))
+
+            # layer = BatchNormalization()
+            # tensors = list(map(lambda x: layer(x), tensors))
+
             layer = LeakyReLU(alpha=0.2)
             tensors = list(map(lambda x: layer(x), tensors))
             return tensors
@@ -61,8 +72,8 @@ def get_decoders(models, num_disp, is_halffeatures=True):
         if False: decoders = upproject(decoders, int(decode_filters/32), 'up5', concat_with='input')
 
         # Extract depths (final layer)
-        left_disp = Conv2D(filters=1, kernel_size=3, strides=1, padding='same', name='disp_left')(decoders[0])
-        right_disp = Conv2D(filters=1, kernel_size=3, strides=1, padding='same', name='disp_right')(decoders[1])
+        left_disp = Conv2D(filters=1, kernel_size=3, strides=1, padding='same', name='disp_left', activation='sigmoid')(decoders[0]) # , activation='sigmoid'
+        right_disp = Conv2D(filters=1, kernel_size=3, strides=1, padding='same', name='disp_right', activation='sigmoid')(decoders[1])
         right_disp = Lambda(lambda x: tf.reverse(x, axis=[2]), name='reverse_disp_right')(right_disp)  # 2 because of batch
 
         left_reconstruction = Lambda(lambda x: generate_image_left(x[0], x[1], x[2]), name='recon_left')([right_img, left_disp, num_disp])
