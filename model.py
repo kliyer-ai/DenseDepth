@@ -72,7 +72,7 @@ def get_decoders(models, num_disp, is_halffeatures=True):
         if False: decoders = upproject(decoders, int(decode_filters/32), 'up5', concat_with='input')
 
         # Extract depths (final layer)
-        left_disp = Conv2D(filters=1, kernel_size=3, strides=1, padding='same', name='disp_left', activation='sigmoid')(decoders[0]) # , activation='sigmoid'
+        left_disp = Conv2D(filters=1, kernel_size=3, strides=1, padding='same', name='disp_left', activation='sigmoid')(decoders[0]) 
         right_disp = Conv2D(filters=1, kernel_size=3, strides=1, padding='same', name='disp_right', activation='sigmoid')(decoders[1])
         right_disp = Lambda(lambda x: tf.reverse(x, axis=[2]), name='reverse_disp_right')(right_disp)  # 2 because of batch
 
