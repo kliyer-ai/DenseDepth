@@ -48,12 +48,26 @@ def crop_left(img, crop_factor):
     crop_width   = tf.cast(crop_factor * width_f, tf.int32)
     return tf.image.crop_to_bounding_box(img, 0, width - crop_width, height, crop_width)
 
+
+def crop_l(img, num_disp):
+    width        = tf.shape(img)[2]
+    width_f      = tf.cast(width, tf.float32)
+    boxes = tf.map_fn(lambda l_disp: [0, l_disp[0]/width_f, 1, 1])
+    return tf.image.crop_and_resize(img, boxes, [0,1,2,3])
+
+
 def crop_right(img, crop_factor):
     height       = tf.shape(img)[1]
     width        = tf.shape(img)[2]
     width_f      = tf.cast(width, tf.float32)
     crop_width   = tf.cast(crop_factor * width_f, tf.int32)
     return tf.image.crop_to_bounding_box(img, 0, 0, height, crop_width)
+
+def crop_r(img, num_disp):
+    width        = tf.shape(img)[2]
+    width_f      = tf.cast(width, tf.float32)
+    boxes = tf.map_fn(lambda l_disp: [0, 0, 1, (width_f - l_disp) / width_f])
+    return tf.image.crop_and_resize(img, boxes, [0,1,2,3])
 
 # =============================================================================================
 
@@ -62,9 +76,9 @@ def supervised_loss_function(y_true, y_pred, include_edges=True):
     alpha_edges = 1 if include_edges else 0
     return image_loss(y_true, y_pred) + alpha_edges * edges(y_true, y_pred)
 
-def disparity_loss_function(y_true, y_pred, crop_factor=1.0):
+def disparity_loss_function(y_true, y_pred, crop_factor=0.6):
     supervised_weight = 1.0
-    disp_weight = 0.0
+    disp_weight = 1.0
 
     left_disp = y_true[:, 0]
     right_disp = y_true[:, 1]
@@ -87,8 +101,8 @@ def disparity_loss_function(y_true, y_pred, crop_factor=1.0):
     else:
         lr_left_loss = tf.reduce_mean(tf.abs(right_to_left_disp - left_disp_est))
         lr_right_loss = tf.reduce_mean(tf.abs(left_to_right_disp - right_disp_est))
-        reg_left_loss = 0.0 # tf.reduce_mean(tf.abs(left_disp_est)) 
-        reg_right_loss = 0.0 # tf.reduce_mean(tf.abs(right_disp_est)) 
+        reg_left_loss = 0.0 
+        reg_right_loss = 0.0  
     total_lr_loss = lr_left_loss + lr_right_loss
 
     # DISPARITY SMOOTHNESS
@@ -105,11 +119,11 @@ def disparity_loss_function(y_true, y_pred, crop_factor=1.0):
     reg_total_loss = reg_left_loss + reg_right_loss
 
     # TOTAL SELF SUPERVISED LOSS
-    total_disp_loss = 1.0 * total_lr_loss + 0.1 * disp_gradient_loss + 0.1 * reg_total_loss
+    total_disp_loss = 1.0 * total_lr_loss + 0.1 * disp_gradient_loss + 0.05 * reg_total_loss
 
 
     # SUPERVISED LOSS
-    mask = True if supervised_weight > 0 and disp_weight > 0 else False
+    mask = supervised_weight > 0 and disp_weight > 0 
 
     left_mask = tf.math.equal(left_disp, 0.0)
     right_mask = tf.math.equal(right_disp, 0.0)
@@ -125,7 +139,7 @@ def disparity_loss_function(y_true, y_pred, crop_factor=1.0):
 
 # image reconstruction
 # l1 and ssim
-def reconstruction_loss_function(y_true, y_pred, crop_factor=1.0):
+def reconstruction_loss_function(y_true, y_pred, crop_factor=0.6):
     left_image = y_true[:, 0]
     right_image = y_true[:, 1]
     left_recon, right_recon = tf.unstack(y_pred, axis=1)
@@ -140,4 +154,4 @@ def reconstruction_loss_function(y_true, y_pred, crop_factor=1.0):
     left_image_loss = image_loss(left_image, left_recon)
     right_image_loss = image_loss(right_image, right_recon)
     total_loss = left_image_loss + right_image_loss
-    return 0.0 * total_loss
+    return 1.0 * total_loss
