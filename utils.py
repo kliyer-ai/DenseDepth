@@ -157,7 +157,8 @@ def compute_errors(gt, pred):
     rmse = (gt - pred) ** 2
     rmse = np.sqrt(rmse.mean())
     log_10 = (np.abs(np.log10(gt)-np.log10(pred))).mean()
-    return a1, a2, a3, abs_rel, rmse, log_10
+    sqrt_rel = ((gt - pred) ** 2 / gt).mean()
+    return a1, a2, a3, abs_rel, rmse, log_10, sqrt_rel
 
 def evaluate(model, test_generator, batch_size=4, verbose=False):
     N = len(test_generator)

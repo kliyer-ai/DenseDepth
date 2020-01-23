@@ -100,3 +100,36 @@ class BasicRGBSequence(Sequence):
         # exit()
 
         return batch_x, batch_y
+
+
+class MonoTestSequence(Sequence):
+    def __init__(self, data, dataset, batch_size):
+        self.data = data
+        self.dataset = dataset
+        self.batch_size = batch_size
+        self.N = len(self.dataset)
+
+    def __len__(self):
+        return int(np.ceil(self.N / float(self.batch_size)))
+
+    def __getitem__(self, idx, is_apply_policy=False):
+        disp_is_halved = True
+
+        batch_x = np.zeros(get_shape_rgb(batch_size=self.batch_size))
+        batch_y = np.zeros(get_shape_depth(batch_size=self.batch_size, halved=disp_is_halved))
+
+        # Augmentation of RGB images
+        for i in range(self.batch_size):
+            index = min((idx * self.batch_size) + i, self.N-1)
+            sample = self.dataset[index]
+
+            left_image = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[0]]) )).reshape(get_shape_rgb())/255,0,1)
+
+            left_disparity = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[2]]) )).reshape(get_shape_depth())/255,0,1)
+            left_disparity = down_scale(left_disparity, 2)
+
+            batch_x[i] = left_image
+            
+            batch_y[i] = left_disparity
+
+        return batch_x, batch_y
