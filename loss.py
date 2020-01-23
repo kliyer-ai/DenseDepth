@@ -49,13 +49,6 @@ def crop_left(img, crop_factor):
     return tf.image.crop_to_bounding_box(img, 0, width - crop_width, height, crop_width)
 
 
-def crop_l(img, num_disp):
-    width        = tf.shape(img)[2]
-    width_f      = tf.cast(width, tf.float32)
-    boxes = tf.map_fn(lambda l_disp: [0, l_disp[0]/width_f, 1, 1])
-    return tf.image.crop_and_resize(img, boxes, [0,1,2,3])
-
-
 def crop_right(img, crop_factor):
     height       = tf.shape(img)[1]
     width        = tf.shape(img)[2]
@@ -63,11 +56,23 @@ def crop_right(img, crop_factor):
     crop_width   = tf.cast(crop_factor * width_f, tf.int32)
     return tf.image.crop_to_bounding_box(img, 0, 0, height, crop_width)
 
-def crop_r(img, num_disp):
+# alternative crop functions
+# crops based on individual max disparity values. As this results in images of different dimensions, images get resized to the same dims
+# does not work very well; probably due to interpolation 
+def crop_l(img, num_disp):
+    height       = tf.shape(img)[1]
     width        = tf.shape(img)[2]
     width_f      = tf.cast(width, tf.float32)
-    boxes = tf.map_fn(lambda l_disp: [0, 0, 1, (width_f - l_disp) / width_f])
-    return tf.image.crop_and_resize(img, boxes, [0,1,2,3])
+    boxes = tf.map_fn(lambda l_disp: [0.0, l_disp[0]/width_f, 1.0, 1.0], num_disp, dtype=[tf.float32, tf.float32, tf.float32, tf.float32])
+    return tf.image.crop_and_resize(img, boxes, [0,1,2,3], [height, width])
+
+
+def crop_r(img, num_disp):
+    height       = tf.shape(img)[1]
+    width        = tf.shape(img)[2]
+    width_f      = tf.cast(width, tf.float32)
+    boxes = tf.map_fn(lambda l_disp: [0, 0, 1, (width_f - l_disp[0]) / width_f], num_disp, dtype=[tf.float32, tf.float32, tf.float32, tf.float32])
+    return tf.image.crop_and_resize(img, boxes, [0,1,2,3], [height, width])
 
 # =============================================================================================
 
