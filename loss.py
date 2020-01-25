@@ -2,6 +2,11 @@ import tensorflow as tf
 from bilinear_sampler import generate_image_left, generate_image_right
 from shape import get_shape_rgb
 
+supervised_weight = 1.0
+self_weight = 1.0
+crop_factor=0.6
+reg_term = 0.1
+
 def edges(y_true, y_pred):
     dy_true, dx_true = tf.image.image_gradients(y_true)
     dy_pred, dx_pred = tf.image.image_gradients(y_pred)
@@ -81,10 +86,7 @@ def supervised_loss_function(y_true, y_pred, include_edges=True):
     alpha_edges = 1 if include_edges else 0
     return image_loss(y_true, y_pred) + alpha_edges * edges(y_true, y_pred)
 
-def disparity_loss_function(y_true, y_pred, crop_factor=0.6):
-    supervised_weight = 1.0
-    disp_weight = 1.0
-
+def disparity_loss_function(y_true, y_pred):
     left_disp = y_true[:, 0]
     right_disp = y_true[:, 1]
     
@@ -124,11 +126,11 @@ def disparity_loss_function(y_true, y_pred, crop_factor=0.6):
     reg_total_loss = reg_left_loss + reg_right_loss
 
     # TOTAL SELF SUPERVISED LOSS
-    total_disp_loss = 1.0 * total_lr_loss + 0.1 * disp_gradient_loss + 0.05 * reg_total_loss
+    total_disp_loss = 1.0 * total_lr_loss + 0.1 * disp_gradient_loss + reg_term * reg_total_loss
 
 
     # SUPERVISED LOSS
-    mask = supervised_weight > 0 and disp_weight > 0 
+    mask = supervised_weight > 0 and self_weight > 0 
 
     left_mask = tf.math.equal(left_disp, 0.0)
     right_mask = tf.math.equal(right_disp, 0.0)
@@ -140,11 +142,11 @@ def disparity_loss_function(y_true, y_pred, crop_factor=0.6):
     total_sup_loss = sup_left_loss + sup_right_loss
 
     
-    return disp_weight * total_disp_loss + supervised_weight * total_sup_loss
+    return self_weight * total_disp_loss + supervised_weight * total_sup_loss
 
 # image reconstruction
 # l1 and ssim
-def reconstruction_loss_function(y_true, y_pred, crop_factor=0.6):
+def reconstruction_loss_function(y_true, y_pred):
     left_image = y_true[:, 0]
     right_image = y_true[:, 1]
     left_recon, right_recon = tf.unstack(y_pred, axis=1)
@@ -159,4 +161,4 @@ def reconstruction_loss_function(y_true, y_pred, crop_factor=0.6):
     left_image_loss = image_loss(left_image, left_recon)
     right_image_loss = image_loss(right_image, right_recon)
     total_loss = left_image_loss + right_image_loss
-    return 1.0 * total_loss
+    return self_weight * total_loss
