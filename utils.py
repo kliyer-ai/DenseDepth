@@ -3,6 +3,9 @@ from PIL import Image
 from shape import get_shape_rgb, get_shape_depth
 import keras.backend as K
 
+def print_errors(e):
+    print("{:>10}, {:>10}, {:>10}, {:>10}, {:>10}, {:>10}, {:>10}".format('a1', 'a2', 'a3', 'abs rel', 'sq rel' , 'rmse', 'log_10'))
+    print("{:10.3f}, {:10.3f}, {:10.3f}, {:10.3f}, {:10.3f}, {:10.3f}, {:10.3f}".format(e[0],e[1],e[2],e[3],e[6],e[4],e[5]))
 
 # Support multiple RGBs, one RGB image, even grayscale 
 def normalize_image_dims(image):
@@ -43,11 +46,12 @@ def load_images(image_files):
     return loaded_images # np.stack(loaded_images, axis=0)
 
 def to_multichannel(i):
+    if len(i.shape) == 2: i = np.expand_dims(i,  axis=-1)
     if i.shape[2] == 3: return i
     i = i[:,:,0]
     return np.stack((i,i,i), axis=2)
         
-def display_images(outputs, inputs=None, gt=None, is_colormap=True, is_rescale=False):
+def display_images(outputs, inputs=None, gt=None, diff=None, is_colormap=False, is_rescale=False):
     import matplotlib.pyplot as plt
     import skimage
     from skimage.transform import resize
@@ -58,8 +62,10 @@ def display_images(outputs, inputs=None, gt=None, is_colormap=True, is_rescale=F
     
     all_images = []
 
+    N = outputs.shape[0]
+
     # iterate over batches
-    for i in range(outputs.shape[0]):
+    for i in range(N):
         imgs = []
         
         if isinstance(inputs, np.ndarray):
@@ -72,26 +78,32 @@ def display_images(outputs, inputs=None, gt=None, is_colormap=True, is_rescale=F
                 x = resize(x, shape, preserve_range=True, mode='reflect', anti_aliasing=True )
                 imgs.append(x)
         
-        if is_colormap:
-            rescaled = outputs[i][:,:,0]
-            if is_rescale:
-                rescaled = rescaled - np.min(rescaled)
-                rescaled = rescaled / np.max(rescaled)
-            imgs.append(plasma(rescaled)[:,:,:3])
-        else:
-            imgs.append(to_multichannel(outputs[i]))
+        if isinstance(outputs, (list, tuple, np.ndarray)):
+            x = to_multichannel(outputs[i])
+            imgs.append(x)
 
         if isinstance(gt, (list, tuple, np.ndarray)):
+            mask = gt[i] == 0.0
             x = to_multichannel(gt[i])
             x = resize(x, shape, preserve_range=True, mode='reflect', anti_aliasing=True )
             imgs.append(x)
 
-        img_set = np.hstack(imgs)
-        all_images.append(img_set)
+        if isinstance(diff, (list, tuple, np.ndarray)):
+            # x = to_multichannel(diff[i])
+            x = diff[i]
+            x[mask] = 0
+            x = plasma(x[:,:,0])[:,:,:3]
+            x = resize(x, shape, preserve_range=True, mode='reflect', anti_aliasing=True )
+            imgs.append(x)
 
+        # img_set = np.hstack(imgs)
+        # all_images.append(img_set)
+        all_images = all_images + imgs
+
+    cols = len(all_images) // N
     all_images = np.stack(all_images)
     
-    return skimage.util.montage(all_images, multichannel=True, fill=(0,0,0))
+    return skimage.util.montage(all_images, multichannel=True, fill=(1,1,1), padding_width=10, grid_shape=(N,cols))
 
 def save_images(filename, outputs, inputs=None, gt=None, is_colormap=True, is_rescale=False):
     montage =  display_images(outputs, inputs, is_colormap, is_rescale)
@@ -104,7 +116,7 @@ def resize(img, resolution, padding=6):
 
 def down_scale(img, factor):
     from skimage.transform import downscale_local_mean
-    return downscale_local_mean(img, (2,2,1))
+    return downscale_local_mean(img, (factor,factor,1))
 
 def load_test_data(test_data_zip_file, nr_inputs=1):
     print('Loading test data...', end='')
@@ -137,17 +149,48 @@ def load_test_data(test_data_zip_file, nr_inputs=1):
     return {'rgb':batches_x, 'depth':batch_y, 'crop':None}
 
 
-def compute_errors(gt, pred):
+def compute_errors(gt, pred, scale=None, mask=True):
     print(gt.shape)
     print(pred.shape)
 
-    # masking to only compute loss over wires where disparity is defined 
-    mask = gt > 0.0
-    pred = pred[mask]
-    gt = gt[mask]
-    
-    pred = np.clip(pred * 255, 1, 255)
-    gt = np.clip(gt * 255, 1, 255) 
+    if isinstance(scale, np.ndarray):
+        # makes sure it works for single batch and array of batches
+        if len(gt.shape) == 4:
+            gt = np.expand_dims(gt, 0)
+            pred = np.expand_dims(pred, 0)
+            scale = np.expand_dims(scale, 0)
+
+        n_batches = gt.shape[0]
+        bs = gt.shape[1]
+        height = gt.shape[2]
+        width = gt.shape[3]
+        n_channels = gt.shape[3]
+
+        scale = np.reshape(scale, [n_batches, bs, 1, 1, 1])
+        scale = np.tile(scale, [1, 1, height, width, 1])
+
+        pred = pred * scale
+        gt = gt * scale
+    else:
+        pred = pred * 255
+        gt = gt * 255
+
+
+    if mask:
+        # masking to only compute loss over wires where disparity is defined 
+        mask = gt > 0.0
+        # no upper boud because it varies
+        pred = pred[mask]
+        gt = gt[mask]
+
+    # no upper boud because it varies
+    pred = np.clip(pred, 1, None)
+    gt = np.clip(gt, 1, None)
+
+    print('Pred Stats:')
+    print(pred.min(), pred.max())
+    print('GT Stats:')
+    print(gt.min(), gt.max())
 
     thresh = np.maximum((gt / pred), (pred / gt))
     a1 = (thresh < 1.25   ).mean()
@@ -162,7 +205,6 @@ def compute_errors(gt, pred):
 
 def evaluate(model, test_generator, batch_size=4, verbose=False):
     N = len(test_generator)
-    print('N: ', N)
     bs = batch_size
 
     predictions = []

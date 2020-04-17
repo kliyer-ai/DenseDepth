@@ -125,7 +125,7 @@ class MonoTestSequence(Sequence):
 
             left_image = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[0]]) )).reshape(get_shape_rgb())/255,0,1)
 
-            left_disparity = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[2]]) )).reshape(get_shape_depth())/255,0,1)
+            left_disparity = np.clip(np.asarray(Image.open( BytesIO(self.data[sample[1]]) )).reshape(get_shape_depth())/255,0,1)
             left_disparity = down_scale(left_disparity, 2)
 
             batch_x[i] = left_image

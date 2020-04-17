@@ -29,7 +29,7 @@ parser.add_argument('--name', default='', type=str, help='name as prefix')
 parser.add_argument('--folder', default='', type=str, help='folder name')
 args = parser.parse_args()
 
-os.environ['CUDA_VISIBLE_DEVICES'] = '1'
+os.environ['CUDA_VISIBLE_DEVICES'] = '3'
 
 print('Loading model...')
 
@@ -47,6 +47,7 @@ simple_model = Model(input=input_left, output=disp_left)
 # Input images
 inputs = load_images( glob.glob(args.input) )
 inputs.append(np.array([1]))
+simple_input = inputs[0]
 
 # GT
 base_path, _ = os.path.split(args.input)
@@ -61,12 +62,18 @@ gt = resize(gt, get_shape_depth(halved=is_halved), preserve_range=True, mode='re
 # Compute results
 disps, recons = predict(model, inputs)
 left_disp = disps[:,0]
+
+alt_left_disp = simple_model.predict(simple_input, batch_size=1)
+
 print_info(left_disp)
+print_info(alt_left_disp)
 print(left_disp.shape)
 
 metrics = compute_errors(np.reshape(gt, get_shape_depth(halved=is_halved)), np.reshape(left_disp, get_shape_depth(halved=is_halved)))
+alt_metrics = compute_errors(np.reshape(gt, get_shape_depth(halved=is_halved)), np.reshape(alt_left_disp, get_shape_depth(halved=is_halved)))
 print("{:>10}, {:>10}, {:>10}, {:>10}, {:>10}, {:>10}".format('a1', 'a2', 'a3', 'rel', 'rms', 'log_10'))
 print("{:10.4f}, {:10.4f}, {:10.4f}, {:10.4f}, {:10.4f}, {:10.4f}".format(metrics[0],metrics[1],metrics[2],metrics[3],metrics[4],metrics[5]))
+print("{:10.4f}, {:10.4f}, {:10.4f}, {:10.4f}, {:10.4f}, {:10.4f}".format(alt_metrics[0],alt_metrics[1],alt_metrics[2],alt_metrics[3],alt_metrics[4],alt_metrics[5]))
 
 #matplotlib problem on ubuntu terminal fix
 #matplotlib.use('TkAgg')   

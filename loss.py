@@ -5,7 +5,7 @@ from shape import get_shape_rgb
 supervised_weight = 1.0
 self_weight = 1.0
 crop_factor=0.6
-reg_term = 0.1
+reg_term = 0.0
 
 def edges(y_true, y_pred):
     dy_true, dx_true = tf.image.image_gradients(y_true)
